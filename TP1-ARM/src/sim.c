@@ -128,7 +128,7 @@ void adds_imm(uint32_t instruction){
         NEXT_STATE.REGS[rd] = result;}
 
 void adds_reg(uint32_t instruction){
-        printf("ADDS1\n");
+        printf("ADDS\n");
         uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
         uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
         uint32_t rd = (instruction >> 0) & 0b11111;
