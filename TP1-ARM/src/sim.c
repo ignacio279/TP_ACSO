@@ -55,26 +55,6 @@ void process_instruction() {
             result = operand1 + imm;
             NEXT_STATE.REGS[rd] = result;
             break;
-
-        case ADD_REG: // suma entre el valor de rn y el valor de rm y se guarda en rd
-            printf("ADD_REG\n");
-            uint32_t rm_add = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
-            uint32_t rn_add = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
-            uint32_t rd_add = (instruction >> 0) & 0b11111;
-            uint32_t imm3_add = (instruction >> 10) & 0b111;
-            uint32_t option = (instruction >> 13) & 0b111;
-            printf("rd: %d\n", rd_add);
-            printf("rn: %d\n", rn_add);
-            printf("rm: %d\n", rm_add);
-            printf("imm3: %d\n", imm3_add);
-            printf("option: %d\n", option);
-            uint64_t result_add;
-            uint64_t operand1_add = NEXT_STATE.REGS[rn];
-            uint64_t operand2_add = NEXT_STATE.REGS[rm_add];
-            printf("nextstate: %d\n", operand1);
-            result_add = operand1_add + operand2_add;
-            NEXT_STATE.REGS[rd] = result_add;
-            break;
         
     
 }
