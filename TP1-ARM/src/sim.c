@@ -5,7 +5,7 @@
 #include <stdlib.h> 
 
 #define ADD_IMM 0b10110001
-#define ADD_REG 0b10110001000
+#define ADD_REG 0b10101011000 
 int halted = 0;  // 0: en ejecución, 1: detenido
 
 void process_instruction() {
@@ -14,12 +14,10 @@ void process_instruction() {
     uint32_t instruction = mem_read_32(CURRENT_STATE.PC);  //Se almacena la instrucción leída.
 
     NEXT_STATE = CURRENT_STATE;
+    
 
-    //for para que a switch se le pase los opcodes
-    
-    
     uint32_t opcode24 = (instruction >> 24) & 0b11111111;  // Extraer los primeros 8 bits como opcode (indican la operacion a realizar)
-    uint32_t opcode21 = (instruction >> 21) & 0b11111111111;      // Extraer los bits 21 al 31 como opcode (indican la operacion a realizar)
+    uint32_t opcode21 = (instruction >> 21) & 0b11111111111;      // Extraer los siguientes 6 bits como opcode (indican la operacion a realizar)
       // Registro destino (donde ser gaurda)    // Operando inmediato o dirección
 
     if (halted) {
@@ -31,7 +29,7 @@ void process_instruction() {
     printf("Opcode 21: 0x%X\n", opcode21);
     printf("0x%X\n",ADD_IMM);
     printf("0x%X\n",ADD_REG);
-    switch (opcode21) {
+    switch (opcode24) {
         case ADD_IMM: // suma entre el valor de rn y el oeprando y se guarda en rd
             printf("ADD_IMM\n");
             uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
@@ -53,6 +51,20 @@ void process_instruction() {
             uint64_t operand1 = NEXT_STATE.REGS[rn];
             printf("nextstate: %d\n", operand1);
             result = operand1 + imm;
+            NEXT_STATE.REGS[rd] = result;
+            break;
+
+        case ADD_REG: // suma entre el valor de rn y el valor de rm y se guarda en rd
+            printf("ADD_REG\n");
+            uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
+            rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
+            rd = (instruction >> 0) & 0b11111;
+            printf("rd: %d\n", rd);
+            printf("rn: %d\n", rn);
+            printf("rm: %d\n", rm);
+            operand1 = NEXT_STATE.REGS[rn];
+            uint64_t operand2 = NEXT_STATE.REGS[rm];
+            result = operand1 + operand2;
             NEXT_STATE.REGS[rd] = result;
             break;
         
