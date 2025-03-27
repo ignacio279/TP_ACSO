@@ -94,7 +94,7 @@ void process_instruction() {
 }
 }
 
-void add_imm(uint32_t instruction){
+void adds_imm(uint32_t instruction){
         uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
         uint32_t rd = (instruction >> 0) & 0b11111;
         uint32_t imm12 = (instruction >> 10) & 0b111111111111;
@@ -110,7 +110,7 @@ void add_imm(uint32_t instruction){
         result = operand1 + imm;
         NEXT_STATE.REGS[rd] = result;}
 
-void add_reg(uint32_t instruction){
+void adds_reg(uint32_t instruction){
         uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
         uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
         uint32_t rd = (instruction >> 0) & 0b11111;
