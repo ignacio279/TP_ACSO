@@ -135,7 +135,6 @@ void adds_reg(uint32_t instruction){
         uint64_t result;
         uint64_t operand1 = NEXT_STATE.REGS[rn];
         uint64_t operand2 = NEXT_STATE.REGS[rm];
-        printf("nextstate: %d\n", operand1);
         result= operand1 + operand2;
         NEXT_STATE.REGS[rd] = result;
 }
