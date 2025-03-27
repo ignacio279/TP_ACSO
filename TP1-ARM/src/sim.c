@@ -85,15 +85,15 @@ void process_instruction() {
         case LSR_IMM: // Logical right shift (X4 = X3 >> 4)
             lsr_imm(instruction);
             break;
-        case STURB: // M[X2 + 0x10](7:0) = X1(7:0)
-            sturb(instruction);
-            break;
-        case STURH: // M[X2 + 0x10](15:0) = X1(15:0)
-            sturh(instruction);
-            break;
-        case LDURB: // X1= 56’b0, M[X2 + 0x10](7:0)
-            ldurb(instruction);
-            break;
+        // case STURB: // M[X2 + 0x10](7:0) = X1(7:0)
+        //     sturb(instruction);
+        //     break;
+        // case STURH: // M[X2 + 0x10](15:0) = X1(15:0)
+        //     sturh(instruction);
+        //     break;
+        // case LDURB: // X1= 56’b0, M[X2 + 0x10](7:0)
+        //     ldurb(instruction);
+        //     break;
         case ADD_IMM: // suma entre el valor de rn y el oeprando y se guarda en rd
             add_imm(instruction);
             break;
