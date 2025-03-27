@@ -59,9 +59,11 @@ void process_instruction() {
     
     switch (opcode24) {
         case ADDS_IMM: // suma entre el valor de rn y el oeprando y se guarda en rd
+            printf("ADDS1\n");
             adds_imm(instruction);
             break;
         case ADDS_REG: // suma entre el valor de rn y el valor de rm y se guarda en rd
+            printf("ADDS\n");
             adds_reg(instruction);
             break;
         case SUBS_IMM: // resta entre el valor de rn y el oeprando y se guarda en rd
@@ -111,7 +113,6 @@ void process_instruction() {
 }
 
 void adds_imm(uint32_t instruction){
-        printf("ADDS1\n");
         uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
         uint32_t rd = (instruction >> 0) & 0b11111;
         uint32_t imm12 = (instruction >> 10) & 0b111111111111;
@@ -128,7 +129,6 @@ void adds_imm(uint32_t instruction){
         NEXT_STATE.REGS[rd] = result;}
 
 void adds_reg(uint32_t instruction){
-        printf("ADDS\n");
         uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
         uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
         uint32_t rd = (instruction >> 0) & 0b11111;
