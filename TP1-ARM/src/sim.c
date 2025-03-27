@@ -19,12 +19,27 @@
 #define ADD_EXT_REG  0b10001011001 
 #define CBZ          0b10110100 
 
+void adds_imm(uint32_t instruction);
+void adds_reg(uint32_t instruction);
+void subs_imm(uint32_t instruction);
+void subs_ext_reg(uint32_t instruction);
+void eor_reg(uint32_t instruction);
+void br(uint32_t instruction);
+void bne(uint32_t instruction);
+void lsr_imm(uint32_t instruction);
+void sturb(uint32_t instruction);
+void sturh(uint32_t instruction);
+void ldurb(uint32_t instruction);
+void add_ext_reg(uint32_t instruction);
+void cbz(uint32_t instruction);
+
+
 
 int halted = 0;  // 0: en ejecución, 1: detenido
 
 void process_instruction() {
 
-    printf("PC actual: 0x%llx\n", CURRENT_STATE.PC); // Se lee la instruccion
+    printf("PC actual: 0x%lx\n", CURRENT_STATE.PC);
     uint32_t instruction = mem_read_32(CURRENT_STATE.PC);  //Se almacena la instrucción leída.
 
     NEXT_STATE = CURRENT_STATE;
@@ -43,10 +58,10 @@ void process_instruction() {
     
     switch (opcode21) {
         case ADDS_IMM: // suma entre el valor de rn y el oeprando y se guarda en rd
-            add_imm(instruction);
+            adds_imm(instruction);
             break;
         case ADDS_REG: // suma entre el valor de rn y el valor de rm y se guarda en rd
-            add_reg(instruction);
+            adds_reg(instruction);
             break;
         case SUBS_IMM: // resta entre el valor de rn y el oeprando y se guarda en rd
             subs_imm(instruction);
@@ -252,16 +267,7 @@ void lsr_imm(uint32_t instruction){
 // Acuerdense que en el simulador la memoria empieza en 0x10000000, ver especificaciones, no
 // cambia la implementación pero si el testeo.
 
-void sturb(uint32_t instruction){
-        uint32_t rt = (instruction >> 0) & 0b11111;      // Registro fuente (origen)
-        uint32_t rn = (instruction >> 5) & 0b11111; 
-        uint32_t imm9 = (instruction >> 12) & 0b111111111;     // Registro fuente (origen)
-        uint64_t result;
-        uint64_t operand1 = NEXT_STATE.REGS[rt];
-        uint64_t operand2 = NEXT_STATE.REGS[rn];
-        result= operand1 + operand2;
-        mem_write_8(result, operand1);
-}
+
 
 // STURH
 // sturh W1, [X2, #0x10] (descripción: M[X2 + 0x10](15:0) = X1(15:0), osea los primeros 16 bits
@@ -270,17 +276,6 @@ void sturb(uint32_t instruction){
 // Acuerdense que en el simulador la memoria empieza en 0x10000000, ver especificaciones, no
 // cambia la implementación pero si el testeo.
 
-void sturh(uint32_t instruction){
-        uint32_t rt = (instruction >> 0) & 0b11111;      // Registro fuente (origen)
-        uint32_t rn = (instruction >> 5) & 0b11111; 
-        uint32_t imm9 = (instruction >> 12) & 0b111111111;     // Registro fuente (origen)
-        uint64_t result;
-        uint64_t operand1 = NEXT_STATE.REGS[rt];
-        uint64_t operand2 = NEXT_STATE.REGS[rn];
-        result= operand1 + operand2;
-        mem_write_16(result, operand1);
-}
-
 
 // LDURB
 // ldurb W1, [X2, #0x10] (descripción: X1= 56’b0, M[X2 + 0x10](7:0), osea 56 ceros y los
@@ -288,16 +283,7 @@ void sturh(uint32_t instruction){
 // Acuerdense que en el simulador la memoria empieza en 0x10000000, ver especificaciones, no
 // cambia la implementación pero si el testeo.
 
-void ldurb(uint32_t instruction){
-        uint32_t rt = (instruction >> 0) & 0b11111;      // Registro fuente (origen)
-        uint32_t rn = (instruction >> 5) & 0b11111; 
-        uint32_t imm9 = (instruction >> 12) & 0b111111111;     // Registro fuente (origen)
-        uint64_t result;
-        uint64_t operand1 = NEXT_STATE.REGS[rt];
-        uint64_t operand2 = NEXT_STATE.REGS[rn];
-        result= operand1 + operand2;
-        NEXT_STATE.REGS[rt] = mem_read_8(result);
-}
+
 
 // ADD (Extended Register & Immediate)
 // Immediate: add X0, X1, 3 (descripción: X0 = X1 + 3)
