@@ -180,6 +180,7 @@ void subs_ext_reg(uint32_t instruction){
 
 
 void eor_reg(uint32_t instruction){
+        print("EOR\n");
         uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
         uint32_t rn = (instruction >> 5) & 0b11111; 
         uint32_t imm6 = (instruction >> 10) & 0b111111;     // Registro fuente (origen)
