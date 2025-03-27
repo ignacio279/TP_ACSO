@@ -57,7 +57,7 @@ void process_instruction() {
         return; // Si el simulador está detenido, no se puede simular
     }
     
-    switch (opcode21) {
+    switch (opcode24) {
         case ADDS_IMM: // suma entre el valor de rn y el oeprando y se guarda en rd
             adds_imm(instruction);
             break;
