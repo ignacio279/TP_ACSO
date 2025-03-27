@@ -111,6 +111,7 @@ void process_instruction() {
 }
 
 void adds_imm(uint32_t instruction){
+        printf("ADDS\n");
         uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
         uint32_t rd = (instruction >> 0) & 0b11111;
         uint32_t imm12 = (instruction >> 10) & 0b111111111111;
@@ -127,6 +128,7 @@ void adds_imm(uint32_t instruction){
         NEXT_STATE.REGS[rd] = result;}
 
 void adds_reg(uint32_t instruction){
+        printf("ADDS\n");
         uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
         uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
         uint32_t rd = (instruction >> 0) & 0b11111;
@@ -141,6 +143,7 @@ void adds_reg(uint32_t instruction){
 
 
 void subs_imm(uint32_t instruction){
+        printf("SUBS\n");
         uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
         uint32_t rd = (instruction >> 0) & 0b11111;
         uint32_t imm12 = (instruction >> 10) & 0b111111111111;
@@ -159,6 +162,7 @@ void subs_imm(uint32_t instruction){
 
 
 void subs_ext_reg(uint32_t instruction){
+        printf("SUBS\n");
         uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
         uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
         uint32_t rd = (instruction >> 0) & 0b11111;
@@ -204,6 +208,7 @@ void eor_reg(uint32_t instruction){
 // br X1 (descripción: saltar a la dirección guardada en el registro X1)
 
 void br(uint32_t instruction){
+        printf("BR\n");
         uint32_t imm26 = (instruction >> 0) & 0b11111111111111111111111111;
         uint64_t result;
         uint64_t operand1 = NEXT_STATE.PC;
@@ -221,6 +226,7 @@ void br(uint32_t instruction){
 // asumir que son cero. Vale para todos los b.conditional. Esta instrucción es un caso de b.cond)
 
 void bne(uint32_t instruction){
+        printf("BNE\n");
         uint32_t imm26 = (instruction >> 0) & 0b11111111111111111111111111;
         uint64_t result;
         uint64_t operand1 = NEXT_STATE.PC;
@@ -239,6 +245,7 @@ void bne(uint32_t instruction){
 // asumir que son cero. Vale para todos los b.conditional. Esta instrucción es un caso de b.cond)
 
 void ble(uint32_t instruction){
+        printf("BLE\n");
         uint32_t imm26 = (instruction >> 0) & 0b11111111111111111111111111;
         uint64_t result;
         uint64_t operand1 = NEXT_STATE.PC;
@@ -250,6 +257,7 @@ void ble(uint32_t instruction){
 // lsr X4, X3, 4 (descripción: Logical right shift (X4 = X3 >> 4)
 
 void lsr_imm(uint32_t instruction){
+        printf("LSR\n");
         uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
         uint32_t rn = (instruction >> 5) & 0b11111; 
         uint32_t imm6 = (instruction >> 10) & 0b111111;     // Registro fuente (origen)
@@ -293,6 +301,7 @@ void lsr_imm(uint32_t instruction){
 // Extended Register: add X0 = X1, X2 (descripción: X0 = X1 + X2)
 
 void add_ext_reg(uint32_t instruction){
+        printf("ADD\n");
         uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
         uint32_t rn = (instruction >> 5) & 0b11111; 
         uint32_t rd = (instruction >> 0) & 0b11111;
@@ -306,6 +315,7 @@ void add_ext_reg(uint32_t instruction){
 }
 
 void add_imm(uint32_t instruction){
+        printf("ADD\n");
         uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
         uint32_t rd = (instruction >> 0) & 0b11111;
         uint32_t imm12 = (instruction >> 10) & 0b111111111111;
@@ -329,6 +339,7 @@ void add_imm(uint32_t instruction){
 // label (descripción: saltar a label, si X3 es 0)
 
 void cbz(uint32_t instruction){
+        printf("CBZ\n");
         uint32_t rt = (instruction >> 0) & 0b11111;      // Registro fuente (origen)
         uint32_t imm19 = (instruction >> 5) & 0b1111111111111111111;     // Registro fuente (origen)
         uint64_t result;
