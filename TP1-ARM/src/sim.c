@@ -31,6 +31,7 @@ void sturb(uint32_t instruction);
 void sturh(uint32_t instruction);
 void ldurb(uint32_t instruction);
 void add_ext_reg(uint32_t instruction);
+void add_imm(uint32_t instruction);
 void cbz(uint32_t instruction);
 
 
