@@ -115,33 +115,32 @@ void process_instruction() {
 }
 
 void adds_imm(uint32_t instruction){
-        uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
-        uint32_t rd = (instruction >> 0) & 0b11111;
-        uint32_t imm12 = (instruction >> 10) & 0b111111111111;
-        uint32_t shift = (instruction >> 22) & 0b11;
-        uint64_t imm = imm12; // Inicializar imm
-        if (shift == 0b00){
-            imm = (uint64_t)imm12;
-        } else if (shift == 0b01){
-            imm = (uint64_t)imm12 << 12;
-        }
-        uint64_t result;
-        uint64_t operand1 = NEXT_STATE.REGS[rn];
-        result = operand1 + imm;
-        NEXT_STATE.REGS[rd] = result;}
+            printf("ADD_IMM\n");
+            uint32_t rn   = (instruction >> 5)  & 0b11111;
+            uint32_t rd   = (instruction >> 0)  & 0b11111;
+            uint32_t imm12 = (instruction >> 10) & 0xFFF;
+            uint32_t shift = (instruction >> 22) & 0b11;
+
+            uint64_t imm = (shift == 0b01) ? ((uint64_t)imm12 << 12) : (uint64_t)imm12;
+
+            printf("rd: %d, rn: %d, imm: %llu\n", rd, rn, imm);
+
+            NEXT_STATE.REGS[rd] = NEXT_STATE.REGS[rn] + imm;}
 
 void adds_reg(uint32_t instruction){
-        uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
-        uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
-        uint32_t rd = (instruction >> 0) & 0b11111;
-        uint32_t imm3 = (instruction >> 10) & 0b111;
-        uint32_t option = (instruction >> 13) & 0b111;
-        uint64_t result;
-        uint64_t operand1 = NEXT_STATE.REGS[rn];
-        uint64_t operand2 = NEXT_STATE.REGS[rm];
-        result= operand1 + operand2;
-        NEXT_STATE.REGS[rd] = result;
-}
+            printf("ANDS_REG\n");
+            uint32_t rm  = (instruction >> 16) & 0b11111;
+            uint32_t rn  = (instruction >> 5)  & 0b11111;
+            uint32_t rd  = (instruction >> 0)  & 0b11111;
+
+            printf("rd: %d, rn: %d, rm: %d\n", rd, rn, rm);
+
+            uint64_t result = NEXT_STATE.REGS[rn] & NEXT_STATE.REGS[rm];
+            NEXT_STATE.REGS[rd] = result;
+
+            // Actualizar banderas
+            NEXT_STATE.FLAG_N = 1;
+            NEXT_STATE.FLAG_Z = 1;}
 
 
 void subs_imm(uint32_t instruction){
