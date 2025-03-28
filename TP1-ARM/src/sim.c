@@ -59,7 +59,7 @@ void process_instruction() {
     printf("Opcode: 0x%02x\n", opcode24);
     printf("ADDS_IMM: 0x%02x\n", ADDS_IMM);
     printf("EOR_REG: 0x%02x\n", SUBS_IMM);   
-    switch (opcode24) {
+    switch (opcode21) {
         case ADDS_IMM: // suma entre el valor de rn y el oeprando y se guarda en rd
             printf("ADDS1\n");
             adds_imm(instruction);
