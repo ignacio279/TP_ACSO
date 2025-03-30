@@ -68,18 +68,18 @@ void process_instruction() {
             subs_ext_reg(instruction);
             break;
         }
-        case STURB: {
-            sturb(instruction);
-            break;
-        }
-        case STURH: {
-            sturh(instruction);
-            break;
-        }
-        case LDURB: {
-            ldurb(instruction);
-            break;
-        }
+        // case STURB: {
+        //     sturb(instruction);
+        //     break;
+        // }
+        // case STURH: {
+        //     sturh(instruction);
+        //     break;
+        // }
+        // case LDURB: {
+        //     ldurb(instruction);
+        //     break;
+        // }
         case ADD_EXT_REG: {
             add_ext_reg(instruction);
             break;
