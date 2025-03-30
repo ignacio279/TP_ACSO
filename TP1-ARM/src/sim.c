@@ -4,13 +4,21 @@
 #include "shell.h"
 #include <stdlib.h> 
 
-#define ADD_IMM  0b10110001
-#define ADD_REG  0b10101011000
+#define ADDS_IMM  0b10110001
+#define ADDS_REG  0b10101011000
 #define HALT     0b11010100010
 #define ANDS_REG 0b11101010
 #define ORR_REG  0b10101010
 #define B_cond 0b01010100
 #define MOVZ 0b11010010100 
+
+void adds_imm(uint32_t instruction);
+void adds_reg(uint32_t instruction);
+void ands_reg(uint32_t instruction);
+void orr_reg(uint32_t instruction);
+void b_cond(uint32_t instruction);
+void movz(uint32_t instruction);
+
 
 void process_instruction() {
     printf("PC actual: 0x%llx\n", CURRENT_STATE.PC);
@@ -25,19 +33,99 @@ void process_instruction() {
     printf("Opcode24: %d | Opcode21: %d\n", opcode24, opcode21);
     
     switch (opcode21) {
-        case ADD_REG: {
-            printf("ADD_REG\n");
-            uint32_t rm  = (instruction >> 16) & 0b11111;
-            uint32_t rn  = (instruction >> 5)  & 0b11111;
-            uint32_t rd  = (instruction >> 0)  & 0b11111;
-
-            printf("rd: %d, rn: %d, rm: %d\n", rd, rn, rm);
-
-            uint64_t result = NEXT_STATE.REGS[rn] + NEXT_STATE.REGS[rm];
-            NEXT_STATE.REGS[rd] = result;
+        case ADDS_REG: {
+            adds_reg(instruction);
             break;
         }
         case MOVZ: {
+            movz(instruction);
+            break;
+        }
+
+        case HALT:
+            printf("HALT detected. Stopping simulation.\n");
+            RUN_BIT = 0;
+            return;
+    }
+
+    switch (opcode24) {
+        case ADDS_IMM: {
+            adds_imm(instruction);
+            break;
+        }
+        case ANDS_REG: {
+            ands_reg(instruction);
+            break;
+        }
+
+        case ORR_REG:{
+            orr_reg(instruction);
+            break;
+
+        }
+        case B_cond:{
+            b_cond(instruction);}
+    }
+
+    NEXT_STATE.PC += 4;
+}
+
+
+void adds_imm(uint32_t instruction) {
+        printf("ADD_IMM\n");
+        uint32_t rn   = (instruction >> 5)  & 0b11111;
+        uint32_t rd   = (instruction >> 0)  & 0b11111;
+        uint32_t imm12 = (instruction >> 10) & 0xFFF;
+        uint32_t shift = (instruction >> 22) & 0b11;
+
+        uint64_t imm = (shift == 0b01) ? ((uint64_t)imm12 << 12) : (uint64_t)imm12;
+
+        printf("rd: %d, rn: %d, imm: %llu\n", rd, rn, imm);
+
+        NEXT_STATE.REGS[rd] = NEXT_STATE.REGS[rn] + imm;}
+
+void adds_reg(uint32_t instruction) {
+        uint32_t rm  = (instruction >> 16) & 0b11111;
+        uint32_t rn  = (instruction >> 5)  & 0b11111;
+        uint32_t rd  = (instruction >> 0)  & 0b11111;
+
+        printf("rd: %d, rn: %d, rm: %d\n", rd, rn, rm);
+
+        uint64_t result = NEXT_STATE.REGS[rn] + NEXT_STATE.REGS[rm];
+        NEXT_STATE.REGS[rd] = result;}
+
+void orr_reg(uint32_t instruction) {
+        printf("ORR_REG\n");
+        uint32_t rm  = (instruction >> 16) & 0b11111;
+        uint32_t rn  = (instruction >> 5)  & 0b11111;
+        uint32_t rd  = (instruction >> 0)  & 0b11111;
+        uint32_t inm6 = (instruction >> 10) & 0b111111;
+
+        printf("rd: %d, rn: %d, rm: %d\n", rd, rn, rm);
+
+        uint64_t result = NEXT_STATE.REGS[rn] | NEXT_STATE.REGS[rm];
+        NEXT_STATE.REGS[rd] = result;
+
+        // Actualizar banderas
+        NEXT_STATE.FLAG_N = 1;
+        NEXT_STATE.FLAG_Z = 1;}
+
+void ands_reg(uint32_t instruction) {
+        printf("ANDS_REG\n");
+        uint32_t rm  = (instruction >> 16) & 0b11111;
+        uint32_t rn  = (instruction >> 5)  & 0b11111;
+        uint32_t rd  = (instruction >> 0)  & 0b11111;
+
+        printf("rd: %d, rn: %d, rm: %d\n", rd, rn, rm);
+
+        uint64_t result = NEXT_STATE.REGS[rn] & NEXT_STATE.REGS[rm];
+        NEXT_STATE.REGS[rd] = result;
+
+        // Actualizar banderas
+        NEXT_STATE.FLAG_N = 1;
+        NEXT_STATE.FLAG_Z = 1;}
+
+void movz(uint32_t instruction) {
             printf("MOVZ\n");
             
             uint32_t imm16 = (instruction >> 5) & 0xFFFF;  // Extraer imm16 (16 bits)
@@ -57,68 +145,10 @@ void process_instruction() {
                 // Guardar el resultado en el registro destino
             NEXT_STATE.REGS[rd]= result;
             
-            printf("Final result: 0x%lX\n", result);
-            break;
-        }
+            printf("Final result: 0x%lX\n", result);}
 
-        case HALT:
-            printf("HALT detected. Stopping simulation.\n");
-            RUN_BIT = 0;
-            return;
-    }
-
-    switch (opcode24) {
-        case ADD_IMM: {
-            printf("ADD_IMM\n");
-            uint32_t rn   = (instruction >> 5)  & 0b11111;
-            uint32_t rd   = (instruction >> 0)  & 0b11111;
-            uint32_t imm12 = (instruction >> 10) & 0xFFF;
-            uint32_t shift = (instruction >> 22) & 0b11;
-
-            uint64_t imm = (shift == 0b01) ? ((uint64_t)imm12 << 12) : (uint64_t)imm12;
-
-            printf("rd: %d, rn: %d, imm: %llu\n", rd, rn, imm);
-
-            NEXT_STATE.REGS[rd] = NEXT_STATE.REGS[rn] + imm;
-            break;
-        }
-        case ANDS_REG: {
-            printf("ANDS_REG\n");
-            uint32_t rm  = (instruction >> 16) & 0b11111;
-            uint32_t rn  = (instruction >> 5)  & 0b11111;
-            uint32_t rd  = (instruction >> 0)  & 0b11111;
-
-            printf("rd: %d, rn: %d, rm: %d\n", rd, rn, rm);
-
-            uint64_t result = NEXT_STATE.REGS[rn] & NEXT_STATE.REGS[rm];
-            NEXT_STATE.REGS[rd] = result;
-
-            // Actualizar banderas
-            NEXT_STATE.FLAG_N = 1;
-            NEXT_STATE.FLAG_Z = 1;
-            break;
-        }
-
-        case ORR_REG:{
-            printf("ORR_REG\n");
-            uint32_t rm  = (instruction >> 16) & 0b11111;
-            uint32_t rn  = (instruction >> 5)  & 0b11111;
-            uint32_t rd  = (instruction >> 0)  & 0b11111;
-            uint32_t inm6 = (instruction >> 10) & 0b111111;
-
-            printf("rd: %d, rn: %d, rm: %d\n", rd, rn, rm);
-
-            uint64_t result = NEXT_STATE.REGS[rn] | NEXT_STATE.REGS[rm];
-            NEXT_STATE.REGS[rd] = result;
-
-            // Actualizar banderas
-            NEXT_STATE.FLAG_N = 1;
-            NEXT_STATE.FLAG_Z = 1;
-            break;
-
-        }
-        case B_cond:{
-            printf("B.condBEQ\n");
+void b_cond(uint32_t instruction) {
+    printf("B.condBEQ\n");
             uint32_t cond = (instruction >> 0) & 0b1111;
             uint32_t imm19 = (instruction >> 5) & 0b1111111111111111111;
 
@@ -146,8 +176,4 @@ void process_instruction() {
             {
                 !(NEXT_STATE.FLAG_Z==0 && NEXT_STATE.FLAG_N== 0); 
             } 
-        }
-    }
-
-    NEXT_STATE.PC += 4;
 }
