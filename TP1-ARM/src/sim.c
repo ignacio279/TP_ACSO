@@ -58,14 +58,9 @@ void process_instruction() {
     uint32_t instruction = mem_read_32(CURRENT_STATE.PC);
     NEXT_STATE = CURRENT_STATE;
 
-    uint32_t opcode24 = (instruction >> 24) & 0xFF;   // Bits 24-31
-    uint32_t opcode21 = (instruction >> 21) & 0x7FF;  // Bits 21-31
+    uint32_t opcode24 = (instruction >> 24) & 0xFF;
+    uint32_t opcode21 = (instruction >> 21) & 0x7FF;  
     uint32_t opcode22 = (instruction >> 22) & 0x3FF;
-
-    printf("opcode24: %d\n", opcode24);
-    printf("opcode21: %d\n", opcode21);
-    printf("subs_ext_reg: %d\n", SUBS_EXT_REG);
-    printf("subs_imm: %d\n", SUBS_IMM);
 
     
     switch (opcode21) {
