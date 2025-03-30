@@ -139,7 +139,10 @@ void adds_imm(uint32_t instruction) {
 
         printf("rd: %d, rn: %d, imm: %llu\n", rd, rn, imm);
 
-        NEXT_STATE.REGS[rd] = NEXT_STATE.REGS[rn] + imm;}
+        NEXT_STATE.REGS[rd] = NEXT_STATE.REGS[rn] + imm;
+
+        NEXT_STATE.FLAG_Z = (NEXT_STATE.REGS[rd] == 0);
+        NEXT_STATE.FLAG_N = (NEXT_STATE.REGS[rd] >> 63) & 1;}
 
 void adds_reg(uint32_t instruction) {
         uint32_t rm  = (instruction >> 16) & 0b11111;
@@ -149,7 +152,10 @@ void adds_reg(uint32_t instruction) {
         printf("rd: %d, rn: %d, rm: %d\n", rd, rn, rm);
 
         uint64_t result = NEXT_STATE.REGS[rn] + NEXT_STATE.REGS[rm];
-        NEXT_STATE.REGS[rd] = result;}
+        NEXT_STATE.REGS[rd] = result;
+        NEXT_STATE.FLAG_Z = (result == 0);
+        NEXT_STATE.FLAG_N = (result >> 63) & 1;
+        }
 
 void orr_reg(uint32_t instruction) {
         printf("ORR_REG\n");
@@ -162,10 +168,8 @@ void orr_reg(uint32_t instruction) {
 
         uint64_t result = NEXT_STATE.REGS[rn] | NEXT_STATE.REGS[rm];
         NEXT_STATE.REGS[rd] = result;
-
-        // Actualizar banderas
-        NEXT_STATE.FLAG_N = 1;
-        NEXT_STATE.FLAG_Z = 1;}
+        NEXT_STATE.FLAG_Z = (result == 0);
+        NEXT_STATE.FLAG_N = (result >> 63) & 1;}
 
 void ands_reg(uint32_t instruction) {
         printf("ANDS_REG\n");
@@ -177,10 +181,8 @@ void ands_reg(uint32_t instruction) {
 
         uint64_t result = NEXT_STATE.REGS[rn] & NEXT_STATE.REGS[rm];
         NEXT_STATE.REGS[rd] = result;
-
-        // Actualizar banderas
-        NEXT_STATE.FLAG_N = 1;
-        NEXT_STATE.FLAG_Z = 1;}
+        NEXT_STATE.FLAG_Z = (result == 0);
+        NEXT_STATE.FLAG_N = (result >> 63) & 1;}
 
 void movz(uint32_t instruction) {
             printf("MOVZ\n");
@@ -251,7 +253,9 @@ void subs_imm(uint32_t instruction){
         uint64_t operand1 = NEXT_STATE.REGS[rn];
         uint64_t operand2= ~imm;
         result = operand1 + operand2;
-        NEXT_STATE.REGS[rd] = result;}
+        NEXT_STATE.REGS[rd] = result;
+        NEXT_STATE.FLAG_Z = (result == 0);
+        NEXT_STATE.FLAG_N = (result >> 63) & 1;}
 
 
 void subs_ext_reg(uint32_t instruction){
@@ -266,6 +270,8 @@ void subs_ext_reg(uint32_t instruction){
         uint64_t operand2 = NEXT_STATE.REGS[rm];
         result= operand1 - operand2;
         NEXT_STATE.REGS[rd] = result;
+        NEXT_STATE.FLAG_Z = (result == 0);
+        NEXT_STATE.FLAG_N = (result >> 63) & 1;
 }
 
 
