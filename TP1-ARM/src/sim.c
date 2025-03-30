@@ -14,20 +14,21 @@
 #define LSL          0b1101001101 //
 #define LSR          0b1101001100 //
 #define CMP_IMM      0b11110000 //
-#define CMP_REG      0b11101011001 //
 #define STUR         0b11111000000 //
 #define SUBS_IMM     0b11110001 //
-#define SUBS_EXT_REG 0b11101011000 //
+#define CMP_REG_SUBS_EXT_REG 0b11101011000
 #define EOR_REG      0b11001010 //
 #define BR           0b1101011000011111000000 
 #define STURB        0b00111000000 //
 #define STURH        0b01111000000
-#define LDURB        0b00111000010
-#define LDUR32       0b10111000010
-#define LDUR64       0b11111000010
+#define LDURB        0b00111000010 //
+#define LDUR32       0b10111000010 //
+#define LDUR64       0b11111000010 //
 #define ADD_IMM      0b10010001 
 #define ADD_EXT_REG  0b10001011001 
 #define CBZ          0b10110100
+#define MUL          0b10011011000
+#define CBNZ         0b10110101
 
 int64_t signextend64(int32_t value, int bit_count) {
     int64_t mask = (int64_t)1 << (bit_count - 1); // Máscara para el bit de signo
@@ -54,9 +55,11 @@ void add_imm(uint32_t instruction);
 void cbz(uint32_t instruction);
 void cmp_reg(uint32_t instruction);
 void stur(uint32_t instruction);
-void sturb(uint32_t instruction);
-void sturh(uint32_t instruction);
 void cmp_imm(uint32_t instruction);
+void mul(uint32_t instruction);
+void cbnz(uint32_t instruction);
+void ldur_32(uint32_t instruction);
+void ldur_64(uint32_t instruction);
 
 void process_instruction() {
     
@@ -79,13 +82,9 @@ void process_instruction() {
             NEXT_STATE.PC += 4;
             break;
         }
-        case SUBS_EXT_REG: {
-            subs_ext_reg(instruction);
-            NEXT_STATE.PC += 4;
-            break;
-        }
-        case CMP_REG: {
+        case CMP_REG_SUBS_EXT_REG: {
             cmp_reg(instruction);
+            subs_ext_reg(instruction);
             NEXT_STATE.PC += 4;
             break;
         }
@@ -169,7 +168,11 @@ void process_instruction() {
             NEXT_STATE.PC += 4;
             break;
         }
-
+        case MUL: {
+            mul(instruction);
+            NEXT_STATE.PC += 4;
+            break;
+        }
         case HALT:
             printf("HALT detected. Stopping simulation.\n");
             RUN_BIT = 0;
@@ -229,47 +232,16 @@ void process_instruction() {
             NEXT_STATE.PC += 4;
             break;
         }
+        case CBNZ:{
+            cbnz(instruction);
+            break;
+        }
         case B_cond:{
-            uint32_t cond = (instruction >> 0) & 0b1111;
-            uint32_t imm19 = (instruction >> 5) & 0b1111111111111111111;
-        
-            printf("cond: %d, imm: %d\n", cond, imm19);
-        
-            switch (cond) {
-                case 0b0000:  // BEQ (Z == 1)
-                    printf("BEQ\n");
-                    NEXT_STATE.FLAG_Z = 1;
-                    break;
-                case 0b0001:  // BNE (Z == 0)
-                    printf("BNE\n");
-                    NEXT_STATE.FLAG_Z = 0;
-                    break;
-                case 0b1100:  // BGT (Z == 0 && N == V)
-                    printf("BGT\n");
-                    NEXT_STATE.FLAG_Z = 0;
-                    NEXT_STATE.FLAG_N = 0;
-                    break;
-                case 0b1011:  // BLT (N != V)
-                    printf("BLT\n");
-                    NEXT_STATE.FLAG_N = !0;
-                    break;
-                case 0b1010:  // BGE (N == V)
-                    printf("BGE\n");
-                    NEXT_STATE.FLAG_N = 0;
-                    break;
-                case 0b1101:  // BLE (!(Z == 0 && N == V))
-                    printf("BLE\n");
-                    NEXT_STATE.FLAG_Z = 1;
-                    NEXT_STATE.FLAG_N = !0;
-                    break;
-                default:
-                    printf("Condición no reconocida: %d\n", cond);
-                    break;
-                NEXT_STATE.PC += 4;
-                break;}
+            b_cond(instruction);
+            break;}
 }
-    }
 }
+
 
 void adds_imm(uint32_t instruction) {
         printf("ADD_IMM\n");
@@ -342,34 +314,92 @@ void movz(uint32_t instruction) {
             NEXT_STATE.REGS[rd]= result;}
 
 void b_cond(uint32_t instruction) {
-    printf("B.condBEQ\n");
-            uint32_t cond = (instruction >> 0) & 0b1111;
-            uint32_t imm19 = (instruction >> 5) & 0b1111111111111111111;
+    uint32_t cond = (instruction >> 0) & 0b1111;
+    uint32_t imm19 = (instruction >> 5) & 0b1111111111111111111;
 
-            printf("cond: %d, imm: %d\n", cond, imm19);
+    printf("cond: %d, imm: %d\n", cond, imm19);
 
-            // Implementación del caso BEQ (Z == 1)
-            if (cond == 0b0000) {
-                NEXT_STATE.FLAG_Z==1;
+    switch (cond) {
 
-            }// Implementación del caso BNE (Z == 1) 
-            else if (cond==0b0001){
-                NEXT_STATE.FLAG_Z==0;
-            }// Implementación del caso BGT (Z == 0 && N == V)
-            else if (cond==0b1100){
-                NEXT_STATE.FLAG_Z==0 && NEXT_STATE.FLAG_N== 0;
-            }// Implementación del caso BLT N! = V
-            else if (cond==0b1011){
-                !(NEXT_STATE.FLAG_N==0);
-            } // Implementación del caso BGE (Z == 1 || N != V)
-            else if (cond==0b1010)
-            {
-               NEXT_STATE.FLAG_N ==0;
-            }//ble !(Z == 0 && N == V)
-            else if (cond==0b1101)
-            {
-                !(NEXT_STATE.FLAG_Z==0 && NEXT_STATE.FLAG_N== 0); 
-            } 
+        case 0b0000:  // BEQ (Z == 1)
+            printf("BEQ\n");
+            if (CURRENT_STATE.FLAG_Z) {
+                printf("Z == 1\n");
+                int32_t imm19 = (instruction >> 5) & 0x7FFFF;
+                int64_t offset = signextend64(imm19, 19) << 2;
+                NEXT_STATE.PC = CURRENT_STATE.PC + offset;     
+            }
+            else{
+                printf("Z == 0\n");
+                NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            }
+            break;
+        case 0b0001:  // BNE (Z == 0)
+            printf("BNE\n");
+            if (!CURRENT_STATE.FLAG_Z) { 
+                int32_t imm19 = (instruction >> 5) & 0x7FFFF;
+                int64_t offset = signextend64(imm19, 19) << 2;
+                
+                NEXT_STATE.PC = CURRENT_STATE.PC + offset;    
+            }
+            else{
+                NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            }
+            break;
+        case 0b1100:  // BGT (Z == 0 && N == V)
+            printf("BGT\n");
+            if (CURRENT_STATE.FLAG_Z==0 && CURRENT_STATE.FLAG_N==0) { 
+                int32_t imm19 = (instruction >> 5) & 0x7FFFF;
+                int64_t offset = signextend64(imm19, 19) << 2;
+                
+                NEXT_STATE.PC = CURRENT_STATE.PC + offset;    
+            }
+            else{
+                NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            }
+            break;
+        case 0b1011:  // BLT (N != V)
+            printf("BLT\n");
+            if (CURRENT_STATE.FLAG_N) { 
+                int32_t imm19 = (instruction >> 5) & 0x7FFFF;
+                int64_t offset = signextend64(imm19, 19) << 2;
+                
+                NEXT_STATE.PC = CURRENT_STATE.PC + offset;    
+            }
+            else{
+                NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            }
+            break;
+        case 0b1010:  // BGE (N == V)
+            printf("BGE\n");
+            if (CURRENT_STATE.FLAG_N==0) { 
+                int32_t imm19 = (instruction >> 5) & 0x7FFFF;
+                int64_t offset = signextend64(imm19, 19) << 2;
+                
+                NEXT_STATE.PC = CURRENT_STATE.PC + offset;    
+            }
+            else{
+                NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            }
+            break;
+        case 0b1101:  // BLE (!(Z == 0 && N == V))
+            printf("BLE\n");
+            if ( ! (CURRENT_STATE.FLAG_Z==0 && CURRENT_STATE.FLAG_N==0)) { 
+                int32_t imm19 = (instruction >> 5) & 0x7FFFF;
+                int64_t offset = signextend64(imm19, 19) << 2;
+                
+                NEXT_STATE.PC = CURRENT_STATE.PC + offset;    
+            }
+            else{
+                NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            }
+            break;
+        default:
+            printf("Condición no reconocida: %d\n", cond);
+            break;
+            
+    break;
+    }
 }
 
 void subs_imm(uint32_t instruction){
@@ -607,4 +637,33 @@ void ldurh(uint32_t instruction) {
     // Leer 2 bytes desde 'address'
     uint16_t data = mem_read_32(address) & 0xFFFF;
     NEXT_STATE.REGS[rt] = data;
+}
+
+void mul(uint32_t instruction) {
+    printf("MUL\n");
+
+    uint32_t rm = (instruction >> 16) & 0x1F; 
+    uint32_t rn = (instruction >> 5)  & 0x1F;
+    uint32_t rd = instruction         & 0x1F;
+    uint64_t op1 = NEXT_STATE.REGS[rn];
+    uint64_t op2 = NEXT_STATE.REGS[rm];
+    uint64_t result = op1 * op2;
+
+    NEXT_STATE.REGS[rd] = result;
+}
+
+void cbnz(uint32_t instruction) {
+    printf("CBNZ\n");
+
+    uint32_t rt = instruction & 0x1F;
+
+    uint32_t imm19 = (instruction >> 5) & 0x7FFFF;
+
+    int64_t offset = signextend64(imm19,19) << 2;
+
+    if (CURRENT_STATE.REGS[rt] != 0) {
+        NEXT_STATE.PC = CURRENT_STATE.PC + offset;
+    } else {
+        NEXT_STATE.PC += 4;
+    }
 }
