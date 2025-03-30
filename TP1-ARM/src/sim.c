@@ -251,8 +251,8 @@ void subs_imm(uint32_t instruction){
         }
         uint64_t result;
         uint64_t operand1 = NEXT_STATE.REGS[rn];
-        uint64_t operand2= ~imm;
-        result = operand1 + operand2;
+        uint64_t operand2= imm;
+        result = operand1 - operand2;
         NEXT_STATE.REGS[rd] = result;
         NEXT_STATE.FLAG_Z = (result == 0);
         NEXT_STATE.FLAG_N = (result >> 63) & 1;}
