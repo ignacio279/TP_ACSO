@@ -262,7 +262,8 @@ void subs_ext_reg(uint32_t instruction){
         uint64_t result;
         uint64_t operand1 = NEXT_STATE.REGS[rn];
         uint64_t operand2 = NEXT_STATE.REGS[rm];
-        result= operand1 - operand2;
+        uint64_t extended_operand2 = extend_register(operand2, option) << imm3;
+        result = operand1 - extended_operand2;
         NEXT_STATE.REGS[rd] = result;
         NEXT_STATE.FLAG_Z = (result == 0);
         NEXT_STATE.FLAG_N = (result >> 63) & 1;
