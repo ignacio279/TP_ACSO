@@ -23,7 +23,7 @@
 #define STURB        0b00111000000 //
 #define STURH        0b01111000000
 #define LDURB        0b00111000010
-#define LDUR         0b11111000010
+#define LDUR         0b10111000010
 #define ADD_IMM      0b10010001 
 #define ADD_EXT_REG  0b10001011001 
 #define CBZ          0b10110100
@@ -46,7 +46,7 @@ void ldur(uint32_t instruction) {
     uint64_t address = CURRENT_STATE.REGS[rn] + offset;
 
     // Leer 64 bits desde 'address'
-    uint64_t data = mem_read_64(address);
+    uint64_t data = mem_read_32(address);
     NEXT_STATE.REGS[rt] = data;
 }
 
