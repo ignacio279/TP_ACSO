@@ -159,6 +159,11 @@ void process_instruction() {
             NEXT_STATE.PC += 4;
             break;
         }
+        case LDURB: {
+            ldurb(instruction);
+            NEXT_STATE.PC += 4;
+            break;
+        }
         case ADD_EXT_REG: {
             add_ext_reg(instruction);
             NEXT_STATE.PC += 4;
