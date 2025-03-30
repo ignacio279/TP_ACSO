@@ -30,36 +30,25 @@
 
 // Función auxiliar para sign-extend de 9 bits a 64 bits
 static int64_t sign_extend_9(uint32_t imm9) {
-    // Si el bit 8 (contando desde 0) está en 1, es negativo
-    if (imm9 & 0x100) {
-        // Llenamos con 1s los bits altos
+    if (imm9 & 0x100)
         return (int64_t)(imm9 | 0xFFFFFFFFFFFFFE00ULL);
-    } else {
+    else
         return (int64_t)imm9;
-    }
 }
 
 void ldur(uint32_t instruction) {
     printf("LDUR\n");
-
-    // Extraer campos
     uint32_t rt   = (instruction >> 0) & 0x1F;   // bits [4:0]
     uint32_t rn   = (instruction >> 5) & 0x1F;   // bits [9:5]
-    uint32_t imm9 = (instruction >> 12) & 0x1FF; // bits [20:12]
+    uint32_t imm9 = (instruction >> 12) & 0x1FF;  // bits [20:12]
 
-    // Sign-extend del imm9 (9 bits) a 64 bits
     int64_t offset = sign_extend_9(imm9);
-
-    // Calcular dirección efectiva
     uint64_t address = CURRENT_STATE.REGS[rn] + offset;
 
-    // Leer 1 byte desde 'address'
-    uint8_t data_byte = mem_read_32(address);
+    // Leer 64 bits desde 'address'
+    uint64_t data = mem_read_64(address);
+    NEXT_STATE.REGS[rt] = data;
 
-    // Se coloca el byte en Rt, con extensión de cero
-    NEXT_STATE.REGS[rt] = (uint64_t)data_byte;
-
-    // Avanzar el PC
     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
 }
 
