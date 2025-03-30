@@ -55,10 +55,6 @@ void process_instruction() {
     uint32_t opcode21 = (instruction >> 21) & 0x7FF;  // Bits 21-31
     uint32_t opcode22 = (instruction >> 22) & 0x3FF;
 
-    printf("opcode24: %d\n", opcode24);
-    printf("opcode21: %d\n", opcode21);
-    printf("instruction: %d\n", instruction);
-    printf('subs_ext_reg: %d\n', SUBS_EXT_REG);
     
     switch (opcode21) {
         case ADDS_REG: {
