@@ -593,8 +593,6 @@ void ldurb(uint32_t instruction) {
     uint32_t word = mem_read_32(address);
     uint8_t data = (uint8_t)(word & 0xFF);
     NEXT_STATE.REGS[rt] = (uint64_t)data;
-
-    NEXT_STATE.PC = CURRENT_STATE.PC + 4;
 }
 
 void ldurh(uint32_t instruction) {
