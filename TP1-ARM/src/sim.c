@@ -434,21 +434,7 @@ void ble(uint32_t instruction){
         NEXT_STATE.PC = result;
 }
 
-// LSR (Immediate)
-// lsr X4, X3, 4 (descripción: Logical right shift (X4 = X3 >> 4)
 
-void lsr_imm(uint32_t instruction){
-        printf("LSR\n");
-        uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
-        uint32_t rn = (instruction >> 5) & 0b11111; 
-        uint32_t imm6 = (instruction >> 10) & 0b111111;     // Registro fuente (origen)
-        uint32_t rd = (instruction >> 0) & 0b11111;
-        uint64_t result;
-        uint64_t operand1 = NEXT_STATE.REGS[rn];
-        uint64_t operand2 = NEXT_STATE.REGS[rm];
-        result= operand1 >> operand2;
-        NEXT_STATE.REGS[rd] = result;
-}
 
 // STURB
 // sturb X1, [X2, #0x10] (descripción: M[X2 + 0x10](7:0) = X1(7:0), osea los primeros 8 bits del
