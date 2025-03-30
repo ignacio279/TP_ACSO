@@ -39,7 +39,7 @@ static int64_t sign_extend_9(uint32_t imm9) {
     }
 }
 
-void ldurb(uint32_t instruction) {
+void ldur(uint32_t instruction) {
     printf("LDURB\n");
 
     // Extraer campos
@@ -169,8 +169,8 @@ void process_instruction() {
             NEXT_STATE.PC += 4;
             break;
         }
-        case LDURB: {
-            ldurb(instruction);
+        case LDUR: {
+            ldur(instruction);
             NEXT_STATE.PC += 4;
             break;
         }
