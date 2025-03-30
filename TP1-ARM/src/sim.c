@@ -22,10 +22,47 @@
 #define BR           0b1101011000011111000000 
 #define STURB        0b00111000000 //
 #define STURH        0b01111000000
-#define LDURB        0b00111000010 
+#define LDURB        0b00111000010
+#define LDUR         0b11111000010
 #define ADD_IMM      0b10010001 
 #define ADD_EXT_REG  0b10001011001 
 #define CBZ          0b10110100
+
+// Función auxiliar para sign-extend de 9 bits a 64 bits
+static int64_t sign_extend_9(uint32_t imm9) {
+    // Si el bit 8 (contando desde 0) está en 1, es negativo
+    if (imm9 & 0x100) {
+        // Llenamos con 1s los bits altos
+        return (int64_t)(imm9 | 0xFFFFFFFFFFFFFE00ULL);
+    } else {
+        return (int64_t)imm9;
+    }
+}
+
+void ldurb(uint32_t instruction) {
+    printf("LDURB\n");
+
+    // Extraer campos
+    uint32_t rt   = (instruction >> 0) & 0x1F;   // bits [4:0]
+    uint32_t rn   = (instruction >> 5) & 0x1F;   // bits [9:5]
+    uint32_t imm9 = (instruction >> 12) & 0x1FF; // bits [20:12]
+
+    // Sign-extend del imm9 (9 bits) a 64 bits
+    int64_t offset = sign_extend_9(imm9);
+
+    // Calcular dirección efectiva
+    uint64_t address = CURRENT_STATE.REGS[rn] + offset;
+
+    // Leer 1 byte desde 'address'
+    uint8_t data_byte = mem_read_8(address);
+
+    // Se coloca el byte en Rt, con extensión de cero
+    NEXT_STATE.REGS[rt] = (uint64_t)data_byte;
+
+    // Avanzar el PC
+    NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+}
+
 
 void adds_imm(uint32_t instruction);
 void adds_reg(uint32_t instruction);
@@ -129,6 +166,11 @@ void process_instruction() {
             }
 
             mem_write_32(address, data);
+            NEXT_STATE.PC += 4;
+            break;
+        }
+        case LDURB: {
+            ldurb(instruction);
             NEXT_STATE.PC += 4;
             break;
         }
@@ -238,7 +280,6 @@ void process_instruction() {
 }
     }
 }
-
 
 void adds_imm(uint32_t instruction) {
         printf("ADD_IMM\n");
