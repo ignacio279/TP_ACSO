@@ -64,14 +64,17 @@ void process_instruction() {
     switch (opcode21) {
         case ADDS_REG: {
             adds_reg(instruction);
+            NEXT_STATE.PC += 4;
             break;
         }
         case MOVZ: {
             movz(instruction);
+            NEXT_STATE.PC += 4;
             break;
         }
         case SUBS_EXT_REG: {
             subs_ext_reg(instruction);
+            NEXT_STATE.PC += 4;
             break;
         }
         // case STURB: {
@@ -88,6 +91,7 @@ void process_instruction() {
         // }
         case ADD_EXT_REG: {
             add_ext_reg(instruction);
+            NEXT_STATE.PC += 4;
             break;
         }
 
@@ -100,46 +104,55 @@ void process_instruction() {
         {
         case LSL : { //lsl X4, X3, 4 (descripción: Logical left shift (X4 = X3 << 4 ))
             lsr_imm(instruction);
+            NEXT_STATE.PC += 4;
             break; 
         }
         case LSR : {
             lsr_imm(instruction);
+            NEXT_STATE.PC += 4;
             break;
         }}
     switch (opcode24) {
         case ADDS_IMM: {
             adds_imm(instruction);
+            NEXT_STATE.PC += 4;
             break;
         }
         case ANDS_REG: {
             ands_reg(instruction);
+            NEXT_STATE.PC += 4;
             break;
         }
         case ORR_REG:{
             orr_reg(instruction);
+            NEXT_STATE.PC += 4;
             break;
         }
         case SUBS_IMM:{
             subs_imm(instruction);
+            NEXT_STATE.PC += 4;
             break;
         }
         case EOR_REG:{
             eor_reg(instruction);
+            NEXT_STATE.PC += 4;
             break;
         }
         case ADD_IMM:{
             add_imm(instruction);
+            NEXT_STATE.PC += 4;    
             break;
         }
         case CBZ:{
             cbz(instruction);
+            NEXT_STATE.PC += 4;
             break;
         }
         case B_cond:{
-            b_cond(instruction);}
+            b_cond(instruction);
+            NEXT_STATE.PC += 4;
+}
     }
-
-    NEXT_STATE.PC += 4;
 }
 
 
