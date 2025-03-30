@@ -65,8 +65,6 @@ void ldur_64(uint32_t instruction) {
     uint32_t high = mem_read_32(address + 4);
     uint64_t data = ((uint64_t) high << 32) | low;
     NEXT_STATE.REGS[rt] = data;
-
-    NEXT_STATE.PC = CURRENT_STATE.PC + 4;
 }
 
 
