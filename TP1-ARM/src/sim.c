@@ -188,12 +188,12 @@ void process_instruction() {
             break;
         }
         case LDUR32: {
-            ldur(instruction);
+            ldur_32(instruction);
             NEXT_STATE.PC += 4;
             break;
         }
         case LDUR64: {
-            ldur(instruction);
+            ldur_64(instruction);
             NEXT_STATE.PC += 4;
             break;
         }
