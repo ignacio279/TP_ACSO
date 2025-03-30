@@ -11,6 +11,8 @@
 #define ORR_REG      0b10101010
 #define B_cond       0b01010100
 #define MOVZ         0b11010010100 
+#define LSL          0b1101001101
+#define LSR          0b1101001100
 
 #define SUBS_IMM     0b11110001 
 #define SUBS_EXT_REG 0b11101011001 
@@ -50,7 +52,7 @@ void process_instruction() {
 
     uint32_t opcode24 = (instruction >> 24) & 0xFF;   // Bits 24-31
     uint32_t opcode21 = (instruction >> 21) & 0x7FF;  // Bits 21-31
-
+    uint32_t opcode22 = (instruction >> 22) & 0x3FF;
     
     switch (opcode21) {
         case ADDS_REG: {
@@ -87,7 +89,49 @@ void process_instruction() {
             RUN_BIT = 0;
             return;
     }
+    switch (opcode22)
+        {
+        case LSL : { //lsl X4, X3, 4 (descripción: Logical left shift (X4 = X3 << 4 ))
+            printf("LSL (Immediate)\n");
 
+            // Extraer campos
+            uint32_t rn = (instruction >> 5) & 0b11111;   
+            uint32_t inms = (instruction >> 10) & 0b111111;                  
+            uint32_t rd = (instruction >> 0) & 0b11111;
+            uint32_t shift = (instruction >> 16) & 0x3F; 
+            uint64_t operand2;
+
+            if (inms ==0b111111) {
+                operand2 = CURRENT_STATE.REGS[rn] >> shift;
+            }
+            else if (inms != 0b111111) {
+                operand2 = CURRENT_STATE.REGS[rn] <<64- shift;
+            }
+            NEXT_STATE.REGS[rd] = operand2;
+
+            break;
+            
+            
+        }
+        case LSR : {
+
+            // Extraer campos
+            uint32_t rn = (instruction >> 5) & 0b11111;   
+            uint32_t inms = (instruction >> 10) & 0b111111;                  
+            uint32_t rd = (instruction >> 0) & 0b11111;
+            uint32_t shift = (instruction >> 16) & 0x3F; 
+            uint64_t operand2;
+
+            if (inms ==0b111111) {
+                operand2 = CURRENT_STATE.REGS[rn] >> shift;
+            }
+            else if (inms != 0b111111) {
+                operand2 = CURRENT_STATE.REGS[rn] <<64- shift;
+            }
+            NEXT_STATE.REGS[rd] = operand2;
+
+            break;
+        }}
     switch (opcode24) {
         case ADDS_IMM: {
             adds_imm(instruction);
