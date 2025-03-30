@@ -44,7 +44,6 @@ void add_imm(uint32_t instruction);
 void cbz(uint32_t instruction);
 
 void process_instruction() {
-    printf("PC actual: 0x%llx\n", CURRENT_STATE.PC);
     
     uint32_t instruction = mem_read_32(CURRENT_STATE.PC);
     NEXT_STATE = CURRENT_STATE;
@@ -52,8 +51,6 @@ void process_instruction() {
     uint32_t opcode24 = (instruction >> 24) & 0xFF;   // Bits 24-31
     uint32_t opcode21 = (instruction >> 21) & 0x7FF;  // Bits 21-31
 
-    printf("Instrucción: 0x%X\n", instruction);
-    printf("Opcode24: %d | Opcode21: %d\n", opcode24, opcode21);
     
     switch (opcode21) {
         case ADDS_REG: {
@@ -137,8 +134,6 @@ void adds_imm(uint32_t instruction) {
 
         uint64_t imm = (shift == 0b01) ? ((uint64_t)imm12 << 12) : (uint64_t)imm12;
 
-        printf("rd: %d, rn: %d, imm: %llu\n", rd, rn, imm);
-
         NEXT_STATE.REGS[rd] = NEXT_STATE.REGS[rn] + imm;
 
         NEXT_STATE.FLAG_Z = (NEXT_STATE.REGS[rd] == 0);
@@ -148,9 +143,7 @@ void adds_reg(uint32_t instruction) {
         uint32_t rm  = (instruction >> 16) & 0b11111;
         uint32_t rn  = (instruction >> 5)  & 0b11111;
         uint32_t rd  = (instruction >> 0)  & 0b11111;
-
-        printf("rd: %d, rn: %d, rm: %d\n", rd, rn, rm);
-
+        
         uint64_t result = NEXT_STATE.REGS[rn] + NEXT_STATE.REGS[rm];
         NEXT_STATE.REGS[rd] = result;
         NEXT_STATE.FLAG_Z = (result == 0);
@@ -238,7 +231,7 @@ void b_cond(uint32_t instruction) {
 }
 
 void subs_imm(uint32_t instruction){
-        printf("SUBS\n");
+        printf("SUBS1\n");
         uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
         uint32_t rd = (instruction >> 0) & 0b11111;
         uint32_t imm12 = (instruction >> 10) & 0b111111111111;
@@ -259,7 +252,7 @@ void subs_imm(uint32_t instruction){
 
 
 void subs_ext_reg(uint32_t instruction){
-        printf("SUBS\n");
+        printf("SUBS2\n");
         uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
         uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
         uint32_t rd = (instruction >> 0) & 0b11111;
