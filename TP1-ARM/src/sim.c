@@ -13,7 +13,9 @@
 #define MOVZ         0b11010010100 
 #define LSL          0b1101001101
 #define LSR          0b1101001100
-
+#define CMP_IMM      0b11110000
+#define CMP_REG      0b11101011001
+#define STUR         0b11111000000
 #define SUBS_IMM     0b11110001 
 #define SUBS_EXT_REG 0b11101011000
 #define EOR_REG      0b11001010 
@@ -45,6 +47,11 @@ void ldurb(uint32_t instruction);
 void add_ext_reg(uint32_t instruction);
 void add_imm(uint32_t instruction);
 void cbz(uint32_t instruction);
+void cmp_reg(uint32_t instruction);
+void stur(uint32_t instruction);
+void sturb(uint32_t instruction);
+void sturh(uint32_t instruction);
+void cmp_imm(uint32_t instruction);
 
 void process_instruction() {
     
@@ -77,18 +84,59 @@ void process_instruction() {
             NEXT_STATE.PC += 4;
             break;
         }
-        // case STURB: {
-        //     sturb(instruction);
-        //     break;
-        // }
-        // case STURH: {
-        //     sturh(instruction);
-        //     break;
-        // }
-        // case LDURB: {
-        //     ldurb(instruction);
-        //     break;
-        // }
+        case CMP_REG: {
+            cmp_reg(instruction);
+            NEXT_STATE.PC += 4;
+            break;
+        }
+        case STUR: {
+            printf("STUR\n");
+            uint32_t rt = (instruction >> 0) & 0b11111;      // Registro fuente (origen)
+            uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
+            uint32_t imm9 = (instruction >> 12) & 0b111111111;
+            uint64_t address = CURRENT_STATE.REGS[rn] + imm9;
+            uint64_t data = CURRENT_STATE.REGS[rt];
+            // Verificación de la memoria en la simulación
+            if (address < 0x10000000) {
+                printf("Error: Acceso a memoria fuera de rango en 0x%lx\n", address);
+                break;}
+            mem_write_32(address, data);
+            NEXT_STATE.PC += 4;
+            break;
+        }
+        case STURB: {
+            printf("STURB\n");
+            uint32_t rt = (instruction >> 0) & 0b11111;      // Registro fuente (origen)
+            uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
+            uint32_t imm9 = (instruction >> 12) & 0b111111111;
+            uint64_t address = CURRENT_STATE.REGS[rn] + imm9;
+            uint64_t data = CURRENT_STATE.REGS[rt];
+            // Verificación de la memoria en la simulación
+            if (address < 0x10000000) {
+                printf("Error: Acceso a memoria fuera de rango en 0x%lx\n", address);
+                break;
+            }
+            mem_write_32(address, data);
+            NEXT_STATE.PC += 4;
+            break;
+        }
+        case STURH: {
+            printf("STURH\n");
+            uint32_t rt = (instruction >> 0) & 0b11111;      // Registro fuente (origen)
+            uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
+            uint32_t imm9 = (instruction >> 12) & 0b111111111;
+            uint64_t address = CURRENT_STATE.REGS[rn] + imm9;
+            uint64_t data = CURRENT_STATE.REGS[rt];
+            // Verificación de la memoria en la simulación
+            if (address < 0x10000000) {
+                printf("Error: Acceso a memoria fuera de rango en 0x%lx\n", address);
+                break;
+            }
+
+            mem_write_32(address, data);
+            NEXT_STATE.PC += 4;
+            break;
+        }
         case ADD_EXT_REG: {
             add_ext_reg(instruction);
             NEXT_STATE.PC += 4;
@@ -149,9 +197,49 @@ void process_instruction() {
             NEXT_STATE.PC += 4;
             break;
         }
-        case B_cond:{
-            b_cond(instruction);
+        case CMP_IMM:{
+            cmp_imm(instruction);
             NEXT_STATE.PC += 4;
+            break;
+        }
+        case B_cond:{
+            uint32_t cond = (instruction >> 0) & 0b1111;
+            uint32_t imm19 = (instruction >> 5) & 0b1111111111111111111;
+        
+            printf("cond: %d, imm: %d\n", cond, imm19);
+        
+            switch (cond) {
+                case 0b0000:  // BEQ (Z == 1)
+                    printf("BEQ\n");
+                    NEXT_STATE.FLAG_Z = 1;
+                    break;
+                case 0b0001:  // BNE (Z == 0)
+                    printf("BNE\n");
+                    NEXT_STATE.FLAG_Z = 0;
+                    break;
+                case 0b1100:  // BGT (Z == 0 && N == V)
+                    printf("BGT\n");
+                    NEXT_STATE.FLAG_Z = 0;
+                    NEXT_STATE.FLAG_N = 0;
+                    break;
+                case 0b1011:  // BLT (N != V)
+                    printf("BLT\n");
+                    NEXT_STATE.FLAG_N = !0;
+                    break;
+                case 0b1010:  // BGE (N == V)
+                    printf("BGE\n");
+                    NEXT_STATE.FLAG_N = 0;
+                    break;
+                case 0b1101:  // BLE (!(Z == 0 && N == V))
+                    printf("BLE\n");
+                    NEXT_STATE.FLAG_Z = 1;
+                    NEXT_STATE.FLAG_N = !0;
+                    break;
+                default:
+                    printf("Condición no reconocida: %d\n", cond);
+                    break;
+                NEXT_STATE.PC += 4;
+                break;}
 }
     }
 }
@@ -339,14 +427,6 @@ void subs_ext_reg(uint32_t instruction){
     NEXT_STATE.FLAG_N = (result >> 63) & 1;
 }
 
-
-//EOR (Shifted Register)
-//eor X0, X1, X2 (descripción: X0 = X1 ^ X2)
-//En el opcode se considerar que shift y N son siempre ceros, por lo que se chequean los bits
-//<31:21>
-//No se tiene que implementar el shift
-
-
 void eor_reg(uint32_t instruction){
         printf("EOR\n");
         uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
@@ -360,17 +440,6 @@ void eor_reg(uint32_t instruction){
         NEXT_STATE.REGS[rd] = result;
 }
 
-
-//B
-//b target:
-//target:
-//(descripción: saltar a la instrucción de target, el target se calcula relativo a donde está
-//apuntando el PC, así que puede ser positivo o negativo el salto, prestar especial atención.
-// Imm26:'00 quiere decir, el immediate seguido de dos bits siendo cero, osea un numero de 28
-// bits.)
-// BR
-// br X1 (descripción: saltar a la dirección guardada en el registro X1)
-
 void br(uint32_t instruction){
         printf("BR\n");
         uint32_t imm26 = (instruction >> 0) & 0b11111111111111111111111111;
@@ -380,75 +449,40 @@ void br(uint32_t instruction){
         NEXT_STATE.PC = result;
 }
 
-// BNE (B.Cond)
-// cmp X1,X2
-// bne target
-// .
-// .
-// target
-// (descripción: salto a target si X1 != X2, se valida el caso con los flags. Si requiere flags C o V,
-// asumir que son cero. Vale para todos los b.conditional. Esta instrucción es un caso de b.cond)
-
-void bne(uint32_t instruction){
-        printf("BNE\n");
-        uint32_t imm26 = (instruction >> 0) & 0b11111111111111111111111111;
+void cmp_reg(uint32_t instruction){
+        printf("CMP_REG\n");
+        uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
+        uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
+        uint32_t rd = (instruction >> 0) & 0b11111;
+        uint32_t imm3 = (instruction >> 10) & 0b111;
+        uint32_t option = (instruction >> 13) & 0b111;
         uint64_t result;
-        uint64_t operand1 = NEXT_STATE.PC;
-        result= operand1 + imm26;
-        NEXT_STATE.PC = result;
+        uint64_t operand1 = NEXT_STATE.REGS[rn];
+        uint64_t operand2 = NEXT_STATE.REGS[rm];
+        result= operand1 - operand2;
+        NEXT_STATE.FLAG_Z = (result == 0);
+        NEXT_STATE.FLAG_N = (result >> 63) & 1;
 }
 
-
-// BLE (B.Cond)
-// cmp X1,X2
-// ble target
-// .
-// .
-// target
-// (descripción: salto a target si X1 <= X2, se valida el caso con los flags. Si requiere flags C o V,
-// asumir que son cero. Vale para todos los b.conditional. Esta instrucción es un caso de b.cond)
-
-void ble(uint32_t instruction){
-        printf("BLE\n");
-        uint32_t imm26 = (instruction >> 0) & 0b11111111111111111111111111;
+void cmp_imm(uint32_t instruction){
+        printf("CMP_IMM\n");
+        uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
+        uint32_t rd = (instruction >> 0) & 0b11111;
+        uint32_t imm12 = (instruction >> 10) & 0b111111111111;
+        uint32_t shift = (instruction >> 22) & 0b11;
+        uint64_t imm = imm12; // Inicializar imm
+        if (shift == 0b00){
+            imm = (uint64_t)imm12;
+        } else if (shift == 0b01){
+            imm = (uint64_t)imm12 << 12;
+        }
         uint64_t result;
-        uint64_t operand1 = NEXT_STATE.PC;
-        result= operand1 + imm26;
-        NEXT_STATE.PC = result;
+        uint64_t operand1 = NEXT_STATE.REGS[rn];
+        uint64_t operand2= ~imm;
+        result = operand1 + operand2;
+        NEXT_STATE.FLAG_Z = (result == 0);
+        NEXT_STATE.FLAG_N = (result >> 63) & 1;
 }
-
-
-
-// STURB
-// sturb X1, [X2, #0x10] (descripción: M[X2 + 0x10](7:0) = X1(7:0), osea los primeros 8 bits del
-// registro son guardados en los primeros 8 bits guardados en la dirección de memoria).
-// Importante acordarse que la memoria es little endian en Arm.
-// Acuerdense que en el simulador la memoria empieza en 0x10000000, ver especificaciones, no
-// cambia la implementación pero si el testeo.
-
-
-
-// STURH
-// sturh W1, [X2, #0x10] (descripción: M[X2 + 0x10](15:0) = X1(15:0), osea los primeros 16 bits
-// del registro son guardados en los primeros 16 bits guardados en la dirección de memoria).
-// Importante acordarse que la memoria es little endian en Arm.
-// Acuerdense que en el simulador la memoria empieza en 0x10000000, ver especificaciones, no
-// cambia la implementación pero si el testeo.
-
-
-// LDURB
-// ldurb W1, [X2, #0x10] (descripción: X1= 56’b0, M[X2 + 0x10](7:0), osea 56 ceros y los
-// primeros 8 bits guardados en la dirección de memoria)
-// Acuerdense que en el simulador la memoria empieza en 0x10000000, ver especificaciones, no
-// cambia la implementación pero si el testeo.
-
-
-
-// ADD (Extended Register & Immediate)
-// Immediate: add X0, X1, 3 (descripción: X0 = X1 + 3)
-// El caso de shift == 01 se debe implementar, osea moviendo el imm12, 12 bits a la izquierda.
-// También se debe implementar shift 00, pero no el caso de ReservedValue.
-// Extended Register: add X0 = X1, X2 (descripción: X0 = X1 + X2)
 
 void add_ext_reg(uint32_t instruction){
         printf("ADD\n");
@@ -481,12 +515,6 @@ void add_imm(uint32_t instruction){
         result = operand1 + imm;
         NEXT_STATE.REGS[rd] = result;
 }
-
-// CBZ
-// cbz X3, label
-// .
-// .
-// label (descripción: saltar a label, si X3 es 0)
 
 void cbz(uint32_t instruction){
         printf("CBZ\n");
