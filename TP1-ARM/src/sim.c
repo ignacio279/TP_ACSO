@@ -40,7 +40,7 @@ static int64_t sign_extend_9(uint32_t imm9) {
 }
 
 void ldur(uint32_t instruction) {
-    printf("LDURB\n");
+    printf("LDUR\n");
 
     // Extraer campos
     uint32_t rt   = (instruction >> 0) & 0x1F;   // bits [4:0]
