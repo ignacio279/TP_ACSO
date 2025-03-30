@@ -57,6 +57,8 @@ void process_instruction() {
 
     printf("opcode24: %d\n", opcode24);
     printf("opcode21: %d\n", opcode21);
+    printf("adds_reg: %d\n", ADDS_REG);
+    printf("adds_imm: %d\n", ADDS_IMM);
 
     
     switch (opcode21) {
