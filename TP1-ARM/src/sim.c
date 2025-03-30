@@ -11,8 +11,8 @@
 #define ORR_REG      0b10101010
 #define B_cond       0b01010100
 #define MOVZ         0b11010010100 
-#define LSL          0b1101001100
-#define LSR          0b1101001101
+#define LSL          0b1101001101
+#define LSR          0b1101001100
 #define CMP_IMM      0b11110000
 #define CMP_REG      0b11101011001
 #define STUR         0b11111000000
