@@ -303,10 +303,7 @@ void movz(uint32_t instruction) {
             
             uint32_t imm16 = (instruction >> 5) & 0xFFFF;  // Extraer imm16 (16 bits)
             uint32_t rd    = (instruction >> 0) & 0x1F;    // Extraer rd (5 bits)
-            uint32_t shift = (instruction >> 21) & 0x3;    // Extraer shift (2 bits)
-        
-            printf("rd: %d, imm16: 0x%X, shift: %d\n", rd, imm16, shift);
-        
+            uint32_t shift = (instruction >> 21) & 0x3;    // Extraer shift (2 bits)        
             uint32_t result = 0;
         
                 // Asignar el valor inmediato sin desplazamiento (hw = 0 implica shift = 0)
@@ -316,9 +313,7 @@ void movz(uint32_t instruction) {
             result = imm16;
                 
                 // Guardar el resultado en el registro destino
-            NEXT_STATE.REGS[rd]= result;
-            
-            printf("Final result: 0x%lX\n", result);}
+            NEXT_STATE.REGS[rd]= result;}
 
 void b_cond(uint32_t instruction) {
     printf("B.condBEQ\n");
