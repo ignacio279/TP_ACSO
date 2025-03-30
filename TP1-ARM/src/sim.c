@@ -98,6 +98,7 @@ void process_instruction() {
         case HALT:
             printf("HALT detected. Stopping simulation.\n");
             RUN_BIT = 0;
+            NEXT_STATE.PC += 4;
             return;
     }
     switch (opcode22)
