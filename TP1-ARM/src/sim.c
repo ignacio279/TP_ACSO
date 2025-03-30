@@ -140,10 +140,11 @@ void adds_imm(uint32_t instruction) {
         NEXT_STATE.FLAG_N = (NEXT_STATE.REGS[rd] >> 63) & 1;}
 
 void adds_reg(uint32_t instruction) {
+        printf("ADD_REG\n");
         uint32_t rm  = (instruction >> 16) & 0b11111;
         uint32_t rn  = (instruction >> 5)  & 0b11111;
         uint32_t rd  = (instruction >> 0)  & 0b11111;
-        
+
         uint64_t result = NEXT_STATE.REGS[rn] + NEXT_STATE.REGS[rm];
         NEXT_STATE.REGS[rd] = result;
         NEXT_STATE.FLAG_Z = (result == 0);
