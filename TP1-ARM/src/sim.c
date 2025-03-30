@@ -128,44 +128,11 @@ void process_instruction() {
     switch (opcode22)
         {
         case LSL : { //lsl X4, X3, 4 (descripción: Logical left shift (X4 = X3 << 4 ))
-            printf("LSL (Immediate)\n");
-
-            // Extraer campos
-            uint32_t rn = (instruction >> 5) & 0b11111;   
-            uint32_t inms = (instruction >> 10) & 0b111111;                  
-            uint32_t rd = (instruction >> 0) & 0b11111;
-            uint32_t shift = (instruction >> 16) & 0x3F; 
-            uint64_t operand2;
-
-            if (inms ==0b111111) {
-                operand2 = CURRENT_STATE.REGS[rn] >> shift;
-            }
-            else if (inms != 0b111111) {
-                operand2 = CURRENT_STATE.REGS[rn] <<64- shift;
-            }
-            NEXT_STATE.REGS[rd] = operand2;
-
-            break;
-            
-            
+            lsr_imm(instruction);
+            break; 
         }
         case LSR : {
-
-            // Extraer campos
-            uint32_t rn = (instruction >> 5) & 0b11111;   
-            uint32_t inms = (instruction >> 10) & 0b111111;                  
-            uint32_t rd = (instruction >> 0) & 0b11111;
-            uint32_t shift = (instruction >> 16) & 0x3F; 
-            uint64_t operand2;
-
-            if (inms ==0b111111) {
-                operand2 = CURRENT_STATE.REGS[rn] >> shift;
-            }
-            else if (inms != 0b111111) {
-                operand2 = CURRENT_STATE.REGS[rn] <<64- shift;
-            }
-            NEXT_STATE.REGS[rd] = operand2;
-
+            lsr_imm(instruction);
             break;
         }}
     switch (opcode24) {
@@ -331,6 +298,41 @@ void subs_imm(uint32_t instruction){
         NEXT_STATE.FLAG_Z = (result == 0);
         NEXT_STATE.FLAG_N = (result >> 63) & 1;}
 
+void lsr_imm(uint32_t instruction){
+        // Extraer campos
+        uint32_t rn = (instruction >> 5) & 0b11111;   
+        uint32_t inms = (instruction >> 10) & 0b111111;                  
+        uint32_t rd = (instruction >> 0) & 0b11111;
+        uint32_t shift = (instruction >> 16) & 0x3F; 
+        uint64_t operand2;
+
+        if (inms ==0b111111) {
+            operand2 = CURRENT_STATE.REGS[rn] >> shift;
+        }
+        else if (inms != 0b111111) {
+            operand2 = CURRENT_STATE.REGS[rn] <<64- shift;
+        }
+        NEXT_STATE.REGS[rd] = operand2;
+}
+
+void lsl_imm(uint32_t instruction){
+        printf("LSL (Immediate)\n");
+
+        // Extraer campos
+        uint32_t rn = (instruction >> 5) & 0b11111;   
+        uint32_t inms = (instruction >> 10) & 0b111111;                  
+        uint32_t rd = (instruction >> 0) & 0b11111;
+        uint32_t shift = (instruction >> 16) & 0x3F; 
+        uint64_t operand2;
+
+        if (inms ==0b111111) {
+            operand2 = CURRENT_STATE.REGS[rn] >> shift;
+        }
+        else if (inms != 0b111111) {
+            operand2 = CURRENT_STATE.REGS[rn] <<64- shift;
+        }
+        NEXT_STATE.REGS[rd] = operand2;
+}
 
 void subs_ext_reg(uint32_t instruction){
     printf("SUBS2\n");
