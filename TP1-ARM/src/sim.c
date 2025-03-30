@@ -37,7 +37,7 @@ static int64_t sign_extend_9(uint32_t imm9) {
         return (int64_t)imm9;
 }
 
-void ldur(uint32_t instruction) {
+void ldur_32(uint32_t instruction) {
     printf("LDUR\n");
     uint32_t rt   = (instruction >> 0) & 0x1F;   // bits [4:0]
     uint32_t rn   = (instruction >> 5) & 0x1F;   // bits [9:5]
@@ -50,6 +50,25 @@ void ldur(uint32_t instruction) {
     uint64_t data = mem_read_32(address);
     NEXT_STATE.REGS[rt] = data;
 }
+
+void ldur_64(uint32_t instruction) {
+    printf("LDUR\n");
+    uint32_t rt   = (instruction >> 0) & 0x1F;   // bits [4:0]
+    uint32_t rn   = (instruction >> 5) & 0x1F;   // bits [9:5]
+    uint32_t imm9 = (instruction >> 12) & 0x1FF;  // bits [20:12]
+
+    int64_t offset = sign_extend_9(imm9);
+    uint64_t address = CURRENT_STATE.REGS[rn] + offset;
+
+    // Leer 64 bits combinando dos lecturas de 32 bits (asumiendo little-endian)
+    uint32_t low  = mem_read_32(address);
+    uint32_t high = mem_read_32(address + 4);
+    uint64_t data = ((uint64_t) high << 32) | low;
+    NEXT_STATE.REGS[rt] = data;
+
+    NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+}
+
 
 
 void adds_imm(uint32_t instruction);
