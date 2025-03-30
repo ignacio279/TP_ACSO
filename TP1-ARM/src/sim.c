@@ -54,7 +54,7 @@ void ldur_64(uint32_t instruction) {
     uint32_t rn   = (instruction >> 5) & 0x1F;   // bits [9:5]
     uint32_t imm9 = (instruction >> 12) & 0x1FF;  // bits [20:12]
 
-    int64_t offset = sign_extend_9(imm9);
+    int64_t offset = signextend64(imm9,9);
     uint64_t address = CURRENT_STATE.REGS[rn] + offset;
 
     // Leer 64 bits combinando dos lecturas de 32 bits (asumiendo little-endian)
