@@ -146,7 +146,7 @@ void process_instruction() {
     switch (opcode22)
         {
         case LSL : { //lsl X4, X3, 4 (descripción: Logical left shift (X4 = X3 << 4 ))
-            lsr_imm(instruction);
+            lsl_imm(instruction);
             NEXT_STATE.PC += 4;
             break; 
         }
