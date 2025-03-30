@@ -54,7 +54,7 @@ void ldurb(uint32_t instruction) {
     uint64_t address = CURRENT_STATE.REGS[rn] + offset;
 
     // Leer 1 byte desde 'address'
-    uint8_t data_byte = mem_read_8(address);
+    uint8_t data_byte = mem_read_32(address);
 
     // Se coloca el byte en Rt, con extensión de cero
     NEXT_STATE.REGS[rt] = (uint64_t)data_byte;
