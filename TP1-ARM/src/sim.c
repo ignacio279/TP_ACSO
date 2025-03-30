@@ -361,6 +361,7 @@ void subs_imm(uint32_t instruction){
         NEXT_STATE.FLAG_N = (result >> 63) & 1;}
 
 void lsr_imm(uint32_t instruction){
+        printf("LSR (Immediate)\n");
         // Extraer campos
         uint32_t rn = (instruction >> 5) & 0b11111;   
         uint32_t inms = (instruction >> 10) & 0b111111;                  
