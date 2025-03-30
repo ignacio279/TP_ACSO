@@ -46,7 +46,7 @@ void ldur(uint32_t instruction) {
     uint64_t address = CURRENT_STATE.REGS[rn] + offset;
 
     // Leer 64 bits desde 'address'
-    uint64_t data = mem_read_32(address);
+    uint64_t data = mem_read_64(address);
     NEXT_STATE.REGS[rt] = data;
 }
 
