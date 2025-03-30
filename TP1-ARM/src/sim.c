@@ -15,7 +15,7 @@
 #define LSR          0b1101001100
 
 #define SUBS_IMM     0b11110001 
-#define SUBS_EXT_REG 0b11101011010 
+#define SUBS_EXT_REG 0b11101011000
 #define EOR_REG      0b11001010 
 #define BR           0b1101011000011111000000 
 #define LSR_IMM      0b110100110 //
