@@ -20,7 +20,6 @@
 #define SUBS_EXT_REG 0b11101011000
 #define EOR_REG      0b11001010 
 #define BR           0b1101011000011111000000 
-#define LSR_IMM      0b110100110 //
 #define STURB        0b00111000000
 #define STURH        0b01111000000
 #define LDURB        0b00111000010 
