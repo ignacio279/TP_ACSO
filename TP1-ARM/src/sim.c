@@ -4,23 +4,23 @@
 #include "shell.h"
 #include <stdlib.h> 
 
-#define ADDS_IMM     0b10110001
-#define ADDS_REG     0b10101011000
-#define HALT         0b11010100010
-#define ANDS_REG     0b11101010
+#define ADDS_IMM     0b10110001 //
+#define ADDS_REG     0b10101011000 //
+#define HALT         0b11010100010 //
+#define ANDS_REG     0b11101010 //
 #define ORR_REG      0b10101010
 #define B_cond       0b01010100
-#define MOVZ         0b11010010100 
-#define LSL          0b1101001101
-#define LSR          0b1101001100
-#define CMP_IMM      0b11110000
-#define CMP_REG      0b11101011001
-#define STUR         0b11111000000
-#define SUBS_IMM     0b11110001 
-#define SUBS_EXT_REG 0b11101011000
-#define EOR_REG      0b11001010 
+#define MOVZ         0b11010010100 //
+#define LSL          0b1101001101 //
+#define LSR          0b1101001100 //
+#define CMP_IMM      0b11110000 //
+#define CMP_REG      0b11101011001 //
+#define STUR         0b11111000000 //
+#define SUBS_IMM     0b11110001 //
+#define SUBS_EXT_REG 0b11101011000 //
+#define EOR_REG      0b11001010 //
 #define BR           0b1101011000011111000000 
-#define STURB        0b00111000000
+#define STURB        0b00111000000 //
 #define STURH        0b01111000000
 #define LDURB        0b00111000010 
 #define ADD_IMM      0b10010001 
@@ -110,6 +110,7 @@ void process_instruction() {
                 printf("Error: Acceso a memoria fuera de rango en 0x%lx\n", address);
                 break;
             }
+            
             mem_write_32(address, data);
             NEXT_STATE.PC += 4;
             break;
