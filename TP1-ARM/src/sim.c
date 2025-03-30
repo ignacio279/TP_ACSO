@@ -38,6 +38,7 @@ void eor_reg(uint32_t instruction);
 void br(uint32_t instruction);
 void bne(uint32_t instruction);
 void lsr_imm(uint32_t instruction);
+void lsl_imm(uint32_t instruction);
 void sturb(uint32_t instruction);
 void sturh(uint32_t instruction);
 void ldurb(uint32_t instruction);
