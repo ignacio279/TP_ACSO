@@ -126,18 +126,29 @@ void process_instruction() {
         }
         case STURB: {
             printf("STURB\n");
-            uint32_t rt = (instruction >> 0) & 0b11111;      // Registro fuente (origen)
-            uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
-            uint32_t imm9 = (instruction >> 12) & 0b111111111;
-            uint64_t address = CURRENT_STATE.REGS[rn] + imm9;
-            uint64_t data = CURRENT_STATE.REGS[rt];
-            // Verificación de la memoria en la simulación
-            if (address < 0x10000000) {
-                printf("Error: Acceso a memoria fuera de rango en 0x%lx\n", address);
-                break;
+        
+            uint32_t rt   = (instruction >> 0) & 0x1F;      // Registro destino
+            uint32_t rn   = (instruction >> 5) & 0x1F;      // Registro base
+            uint32_t imm9 = (instruction >> 12) & 0x1FF;    // Desplazamiento de 9 bits (con signo)
+        
+            // Sign-extend de imm9 a 64 bits (9 bits → int64_t)
+            int64_t offset = 0;
+            // Verifica si el bit 8 (de imm9) está en 1 (indicando número negativo):
+            if (imm9 & 0x100) { 
+                offset = imm9 | 0xFFFFFFFFFFFFFE00ULL; // Extiende con 1s
+            } else {
+                offset = imm9; // Positivo, no hace falta rellenar
             }
-            
-            mem_write_32(address, data);
+        
+            uint64_t address = CURRENT_STATE.REGS[rn] + offset;
+        
+            // Solo el byte menos significativo de Rt
+            uint8_t data_byte = (uint8_t)(CURRENT_STATE.REGS[rt] & 0xFF);
+        
+        
+            // Guardar 1 byte
+            mem_write_32(address, data_byte);
+        
             NEXT_STATE.PC += 4;
             break;
         }
