@@ -34,36 +34,6 @@ int64_t signextend64(int32_t value, int bit_count) {
     return (value ^ mask) - mask; // Extensión de signo a 64 bits
 }
 
-void ldur_32(uint32_t instruction) {
-    printf("LDUR\n");
-    uint32_t rt   = (instruction >> 0) & 0x1F;   // bits [4:0]
-    uint32_t rn   = (instruction >> 5) & 0x1F;   // bits [9:5]
-    uint32_t imm9 = (instruction >> 12) & 0x1FF;  // bits [20:12]
-
-    int64_t offset = signextend64(imm9,9);
-    uint64_t address = CURRENT_STATE.REGS[rn] + offset;
-
-    // Leer 64 bits desde 'address'
-    uint64_t data = mem_read_32(address);
-    NEXT_STATE.REGS[rt] = data;
-}
-
-void ldur_64(uint32_t instruction) {
-    printf("LDUR\n");
-    uint32_t rt   = (instruction >> 0) & 0x1F;   // bits [4:0]
-    uint32_t rn   = (instruction >> 5) & 0x1F;   // bits [9:5]
-    uint32_t imm9 = (instruction >> 12) & 0x1FF;  // bits [20:12]
-
-    int64_t offset = signextend64(imm9,9);
-    uint64_t address = CURRENT_STATE.REGS[rn] + offset;
-
-    // Leer 64 bits combinando dos lecturas de 32 bits (asumiendo little-endian)
-    uint32_t low  = mem_read_32(address);
-    uint32_t high = mem_read_32(address + 4);
-    uint64_t data = ((uint64_t) high << 32) | low;
-    NEXT_STATE.REGS[rt] = data;
-}
-
 void adds_imm(uint32_t instruction);
 void adds_reg(uint32_t instruction);
 void ands_reg(uint32_t instruction);
@@ -74,7 +44,6 @@ void subs_imm(uint32_t instruction);
 void subs_ext_reg(uint32_t instruction);
 void eor_reg(uint32_t instruction);
 void br(uint32_t instruction);
-void bne(uint32_t instruction);
 void lsr_imm(uint32_t instruction);
 void lsl_imm(uint32_t instruction);
 void sturb(uint32_t instruction);
@@ -574,4 +543,65 @@ void cbz(uint32_t instruction){
             result= operand1 + imm19;
             NEXT_STATE.PC = result;
         }
+}
+
+void ldur_64(uint32_t instruction) {
+    printf("LDUR\n");
+    uint32_t rt   = (instruction >> 0) & 0x1F;   // bits [4:0]
+    uint32_t rn   = (instruction >> 5) & 0x1F;   // bits [9:5]
+    uint32_t imm9 = (instruction >> 12) & 0x1FF;  // bits [20:12]
+
+    int64_t offset = signextend64(imm9,9);
+    uint64_t address = CURRENT_STATE.REGS[rn] + offset;
+
+    // Leer 64 bits combinando dos lecturas de 32 bits (asumiendo little-endian)
+    uint32_t low  = mem_read_32(address);
+    uint32_t high = mem_read_32(address + 4);
+    uint64_t data = ((uint64_t) high << 32) | low;
+    NEXT_STATE.REGS[rt] = data;
+}
+
+void ldur_32(uint32_t instruction) {
+    printf("LDUR\n");
+    uint32_t rt   = (instruction >> 0) & 0x1F;   // bits [4:0]
+    uint32_t rn   = (instruction >> 5) & 0x1F;   // bits [9:5]
+    uint32_t imm9 = (instruction >> 12) & 0x1FF;  // bits [20:12]
+
+    int64_t offset = signextend64(imm9,9);
+    uint64_t address = CURRENT_STATE.REGS[rn] + offset;
+
+    // Leer 64 bits desde 'address'
+    uint64_t data = mem_read_32(address);
+    NEXT_STATE.REGS[rt] = data;
+}
+
+void ldurb(uint32_t instruction) {
+    printf("LDURB\n");
+    uint32_t rt   = instruction & 0x1F;            // bits [4:0]
+    uint32_t rn   = (instruction >> 5) & 0x1F;       // bits [9:5]
+    uint32_t imm9 = (instruction >> 12) & 0x1FF;      // bits [20:12]
+
+    int64_t offset = signextend64(imm9,9);
+    uint64_t address = CURRENT_STATE.REGS[rn] + offset;
+
+    // Se lee 32 bits y se extrae el byte menos significativo
+    uint32_t word = mem_read_32(address);
+    uint8_t data = (uint8_t)(word & 0xFF);
+    NEXT_STATE.REGS[rt] = (uint64_t)data;
+
+    NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+}
+
+void ldurh(uint32_t instruction) {
+    printf("LDURH\n");
+    uint32_t rt   = (instruction >> 0) & 0x1F;   // bits [4:0]
+    uint32_t rn   = (instruction >> 5) & 0x1F;   // bits [9:5]
+    uint32_t imm9 = (instruction >> 12) & 0x1FF;  // bits [20:12]
+
+    int64_t offset = signextend64(imm9,9);
+    uint64_t address = CURRENT_STATE.REGS[rn] + offset;
+
+    // Leer 2 bytes desde 'address'
+    uint16_t data = mem_read_32(address) & 0xFFFF;
+    NEXT_STATE.REGS[rt] = data;
 }
