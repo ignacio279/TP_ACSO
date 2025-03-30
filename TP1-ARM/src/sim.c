@@ -45,6 +45,42 @@ void add_ext_reg(uint32_t instruction);
 void add_imm(uint32_t instruction);
 void cbz(uint32_t instruction);
 
+uint64_t extend_and_shift(uint64_t operand, uint32_t option, uint32_t imm3) {
+    uint64_t extended;
+    switch (option) {
+        case 0b000: // UXTB: zero-extend byte (8 bits)
+            extended = operand & 0xFF;
+            break;
+        case 0b001: // UXTH: zero-extend halfword (16 bits)
+            extended = operand & 0xFFFF;
+            break;
+        case 0b010: // UXTW: zero-extend word (32 bits)
+            extended = operand & 0xFFFFFFFF;
+            break;
+        case 0b011: // UXTX: no change (64 bits)
+            extended = operand;
+            break;
+        case 0b100: // SXTB: sign-extend byte (8 bits)
+            extended = (int64_t)((int8_t)(operand & 0xFF));
+            break;
+        case 0b101: // SXTH: sign-extend halfword (16 bits)
+            extended = (int64_t)((int16_t)(operand & 0xFFFF));
+            break;
+        case 0b110: // SXTW: sign-extend word (32 bits)
+            extended = (int64_t)((int32_t)(operand & 0xFFFFFFFF));
+            break;
+        case 0b111: // SXTX: no cambio (64 bits)
+            extended = operand;
+            break;
+        default:
+            extended = operand;  // Fallback
+            break;
+    }
+    // Luego se aplica el desplazamiento (generalmente shift left por imm3)
+    return extended << imm3;
+}
+
+
 void process_instruction() {
     
     uint32_t instruction = mem_read_32(CURRENT_STATE.PC);
@@ -297,20 +333,24 @@ void subs_imm(uint32_t instruction){
 
 
 void subs_ext_reg(uint32_t instruction){
-        printf("SUBS2\n");
-        uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
-        uint32_t rn = (instruction >> 5) & 0b11111;      // Registro fuente (origen)
-        uint32_t rd = (instruction >> 0) & 0b11111;
-        uint32_t imm3 = (instruction >> 10) & 0b111;
-        uint32_t option = (instruction >> 13) & 0b111;
-        uint64_t result;
-        uint64_t operand1 = NEXT_STATE.REGS[rn];
-        uint64_t operand2 = NEXT_STATE.REGS[rm];
-        uint64_t extended_operand2 = extend_register(operand2, option) << imm3;
-        result = operand1 - extended_operand2;
-        NEXT_STATE.REGS[rd] = result;
-        NEXT_STATE.FLAG_Z = (result == 0);
-        NEXT_STATE.FLAG_N = (result >> 63) & 1;
+    printf("SUBS2\n");
+    uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
+    uint32_t rn = (instruction >> 5)  & 0b11111;      // Registro fuente (origen)
+    uint32_t rd = (instruction >> 0)  & 0b11111;
+    uint32_t imm3 = (instruction >> 10) & 0b111;
+    uint32_t option = (instruction >> 13) & 0b111;
+    
+    uint64_t operand1 = NEXT_STATE.REGS[rn];
+    uint64_t operand2 = NEXT_STATE.REGS[rm];
+    
+    // Aplicar extensión y desplazamiento a operand2
+    uint64_t extended_operand2 = extend_and_shift(operand2, option, imm3);
+    
+    uint64_t result = operand1 - extended_operand2;
+    NEXT_STATE.REGS[rd] = result;
+    
+    NEXT_STATE.FLAG_Z = (result == 0);
+    NEXT_STATE.FLAG_N = (result >> 63) & 1;
 }
 
 
