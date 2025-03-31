@@ -1,6 +1,6 @@
 .text
-movz x11, 8
-cmp X11, X12
+movz X0,8
+cmp X0, X1
 bgt foo
 adds X2, X0, 10
 
