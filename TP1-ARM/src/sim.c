@@ -535,17 +535,41 @@ void cmp_imm(uint32_t instruction){
 }
 
 void add_ext_reg(uint32_t instruction){
-        printf("ADD\n");
-        uint32_t rm = (instruction >> 16) & 0b11111;      // Registro fuente (origen)
-        uint32_t rn = (instruction >> 5) & 0b11111; 
-        uint32_t rd = (instruction >> 0) & 0b11111;
-        uint32_t imm3 = (instruction >> 10) & 0b111;
-        uint32_t option = (instruction >> 13) & 0b111;
-        uint64_t result;
-        uint64_t operand1 = NEXT_STATE.REGS[rn];
-        uint64_t operand2 = NEXT_STATE.REGS[rm];
-        result= operand1 + operand2;
-        NEXT_STATE.REGS[rd] = result;
+    printf("ADD\n");
+    uint32_t rm = (instruction >> 16) & 0b11111;
+    uint32_t rn = (instruction >> 5)  & 0b11111; 
+    uint32_t rd = (instruction >> 0)  & 0b11111;
+    uint32_t imm3 = (instruction >> 10) & 0b111;
+    uint32_t option = (instruction >> 13) & 0b111;
+    
+    uint64_t operand1 = NEXT_STATE.REGS[rn];
+    uint64_t operand2 = NEXT_STATE.REGS[rm];
+    uint64_t extended_operand2;
+    
+    // Realizar la extensión y el desplazamiento sin una función auxiliar:
+    if (option == 0b000) {         // UXTB
+        extended_operand2 = (operand2 & 0xFF);
+    } else if (option == 0b001) {  // UXTH
+        extended_operand2 = (operand2 & 0xFFFF);
+    } else if (option == 0b010) {  // UXTW
+        extended_operand2 = (operand2 & 0xFFFFFFFF);
+    } else if (option == 0b011) {  // UXTX
+        extended_operand2 = operand2;
+    } else if (option == 0b100) {  // SXTB
+        extended_operand2 = (int64_t)((int8_t)(operand2 & 0xFF));
+    } else if (option == 0b101) {  // SXTH
+        extended_operand2 = (int64_t)((int16_t)(operand2 & 0xFFFF));
+    } else if (option == 0b110) {  // SXTW
+        extended_operand2 = (int64_t)((int32_t)(operand2 & 0xFFFFFFFF));
+    } else { // 0b111: SXTX
+        extended_operand2 = operand2;
+    }
+    
+    // Aplicar el desplazamiento: el desplazamiento (imm3) se usa para desplazar a la izquierda.
+    extended_operand2 = extended_operand2 << imm3;
+    
+    uint64_t result = operand1 + extended_operand2;
+    NEXT_STATE.REGS[rd] = result;
 }
 
 void add_imm(uint32_t instruction){
