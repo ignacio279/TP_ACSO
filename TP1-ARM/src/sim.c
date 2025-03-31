@@ -9,7 +9,7 @@
 #define HALT         0b11010100010 //
 #define ANDS_REG     0b11101010 //
 #define ORR_REG      0b10101010 //
-#define B_cond       0b01010100
+#define B_cond       0b01010100 //
 #define MOVZ         0b11010010100 //
 #define LSL          0b1101001101 //
 #define LSR          0b1101001100 //
