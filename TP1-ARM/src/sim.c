@@ -70,7 +70,6 @@ void process_instruction() {
     uint32_t opcode21 = (instruction >> 21) & 0x7FF;  
     uint32_t opcode22 = (instruction >> 22) & 0x3FF;
 
-    
     switch (opcode21) {
         case ADDS_REG: {
             adds_reg(instruction);
@@ -241,7 +240,6 @@ void process_instruction() {
             break;}
 }
 }
-
 
 void adds_imm(uint32_t instruction) {
         printf("ADD_IMM\n");
