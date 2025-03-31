@@ -16,7 +16,7 @@
 #define CMP_IMM      0b11110000 //
 #define STUR         0b11111000000 //
 #define SUBS_IMM     0b11110001 //
-#define CMP_REG_SUBS_EXT_REG 0b11101011000
+#define CMP_REG_SUBS_EXT_REG 0b11101011000 //
 #define EOR_REG      0b11001010 //
 #define BR           0b1101011000011111000000 
 #define STURB        0b00111000000 //
@@ -27,7 +27,7 @@
 #define ADD_IMM      0b10010001 
 #define ADD_EXT_REG  0b10001011001 
 #define CBZ          0b10110100
-#define MUL          0b10011011000
+#define MUL          0b10011011000 //
 #define CBNZ         0b10110101
 
 int64_t signextend64(int32_t value, int bit_count) {
