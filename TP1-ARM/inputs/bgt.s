@@ -1,4 +1,5 @@
 .text
+movz x11, 8
 cmp X11, X12
 bgt foo
 adds X2, X0, 10
