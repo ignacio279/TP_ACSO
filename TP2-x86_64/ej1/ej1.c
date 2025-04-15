@@ -2,9 +2,7 @@
 
 string_proc_list* string_proc_list_create(void) {
     string_proc_list* list = (string_proc_list*)malloc(sizeof(string_proc_list));
-    if (list == NULL) {
-        return NULL;
-    }
+    if (!list) return NULL;
     list->first = NULL;
     list->last  = NULL;
     return list;
@@ -26,6 +24,7 @@ char* string_proc_list_concat(string_proc_list* list, uint8_t type , char* hash)
 void string_proc_list_destroy(string_proc_list* list){
 
 	/* borro los nodos: */
+	if (list == NULL) return;
 	string_proc_node* current_node	= list->first;
 	string_proc_node* next_node		= NULL;
 	while(current_node != NULL){
