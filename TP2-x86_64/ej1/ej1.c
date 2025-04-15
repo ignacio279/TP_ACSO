@@ -8,56 +8,13 @@ string_proc_list* string_proc_list_create(void) {
     return list;
 }
 
-string_proc_node* string_proc_node_create(uint8_t type, char* hash) {
-    string_proc_node* node = (string_proc_node*)malloc(sizeof(string_proc_node));
-    if (!node) return NULL;
-    node->type = type;
-    node->hash = strdup(hash);
-    if (node->hash == NULL) {
-        free(node);
-        return NULL;
-    }
-    node->next = NULL;
-    node->previous = NULL;
-    return node;
+string_proc_node* string_proc_node_create(uint8_t type, char* hash){
 }
 
-void string_proc_list_add_node(string_proc_list* list, uint8_t type, char* hash) {
- 	if (!list) return;
-    string_proc_node* new_node = string_proc_node_create(type, hash);
-    if (!new_node) return;
-
-    if (list->last == NULL) {
-        list->first = new_node;
-        list->last  = new_node;
-    } else {
-        new_node->previous = list->last;
-        list->last->next   = new_node;
-        list->last         = new_node;
-    }
+void string_proc_list_add_node(string_proc_list* list, uint8_t type, char* hash){
 }
 
-
-char* string_proc_list_concat(string_proc_list* list, uint8_t type, char* hash) {
-    if (list == NULL || hash == NULL) {
-        return NULL;}
-    char* result = strdup(hash);
-    if (!result) return NULL; 
-    string_proc_node* current_node = list->first;
-    while (current_node != NULL) {
-        if (current_node->type == type) {
-            char* temp = str_concat(result, current_node->hash);
-            if (temp == NULL) {
-                free(result); 
-                return NULL;
-            }
-            free(result); 
-            result = temp; 
-        }
-        current_node = current_node->next;
-    }
-
-    return result; 
+char* string_proc_list_concat(string_proc_list* list, uint8_t type , char* hash){
 }
 
 
