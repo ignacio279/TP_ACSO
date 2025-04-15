@@ -1,18 +1,7 @@
 #include "ej1.h"
 
-string_proc_list* string_proc_list_create(void) {
-    // Reservamos memoria para la estructura de la lista
-    string_proc_list* list = (string_proc_list*)malloc(sizeof(string_proc_list));
-    if (list == NULL) {
-        // En caso de error al asignar memoria, se retorna NULL
-        return NULL;
-    }
-    // Inicializamos los punteros de la lista a NULL para indicar que está vacía
-    list->first = NULL;
-    list->last  = NULL;
-    return list;
+string_proc_list* string_proc_list_create(void){
 }
-
 
 string_proc_node* string_proc_node_create(uint8_t type, char* hash){
 }
