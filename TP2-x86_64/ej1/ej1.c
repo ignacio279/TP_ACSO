@@ -64,7 +64,6 @@ char* string_proc_list_concat(string_proc_list* list, uint8_t type, char* hash) 
 /** AUX FUNCTIONS **/
 
 void string_proc_list_destroy(string_proc_list* list){
-	if (list == NULL || list->first == NULL) return;  // Si la lista es NULL o está vacía, no hacemos nada
 	/* borro los nodos: */
 	string_proc_node* current_node	= list->first;
 	string_proc_node* next_node		= NULL;
