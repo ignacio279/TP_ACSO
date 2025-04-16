@@ -85,8 +85,11 @@ string_proc_list_concat_asm:
     ; r11 = list pointer
     mov r11, rdi
 
+    ; Guardar el parámetro "type" (que viene en RSI) en R12 para preservarlo.
+    mov r12, rsi
+
     ; Llamar a strdup(hash)
-    mov rdi, rdx         ; parámetro: hash
+    mov rdi, rdx         ; parámetro: hash (en RDX)
     call strdup
     test rax, rax
     je .return_concat_null
@@ -99,14 +102,14 @@ string_proc_list_concat_asm:
     test r8, r8          ; Si current_node es NULL, terminamos
     je .end_concat_loop
 
-    ; Comparar current_node->type (byte en [r8+16]) con type (parte baja de RSI en SIL)
+    ; Comparar current_node->type (byte en [r8+16]) con el valor original de "type" (en r12b)
     mov al, byte [r8+16]
-    cmp al, sil
+    cmp al, r12b
     jne .skip_concat
 
     ; Llamar a str_concat(result, current_node->hash)
-    mov rdi, r10             ; primer parámetro: result
-    mov rsi, qword [r8+24]    ; segundo parámetro: current_node->hash (offset 24)
+    mov rdi, r10              ; primer parámetro: result
+    mov rsi, qword [r8+24]     ; segundo parámetro: current_node->hash (offset 24)
     call str_concat
     test rax, rax
     je .concat_fail         ; Si falla, liberar result y retornar NULL
