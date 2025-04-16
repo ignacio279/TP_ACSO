@@ -8,7 +8,18 @@ string_proc_list* string_proc_list_create(void) {
     return list;
 }
 
-string_proc_node* string_proc_node_create(uint8_t type, char* hash){
+string_proc_node* string_proc_node_create(uint8_t type, char* hash) {
+    string_proc_node* node = (string_proc_node*)malloc(sizeof(string_proc_node));
+    if (!node) return NULL;
+    node->type = type;
+    node->hash = strdup(hash);
+    if (node->hash == NULL) {
+        free(node);
+        return NULL;
+    }
+    node->next = NULL;
+    node->previous = NULL;
+    return node;
 }
 
 void string_proc_list_add_node(string_proc_list* list, uint8_t type, char* hash){
