@@ -78,6 +78,7 @@ void string_proc_list_destroy(string_proc_list* list){
 	free(list);
 }
 void string_proc_node_destroy(string_proc_node* node){
+	if (node == NULL) return;  // Si el nodo es NULL, no hacemos nada
 	node->next      = NULL;
 	node->previous	= NULL;
 	node->hash		= NULL;
