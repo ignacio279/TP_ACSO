@@ -75,7 +75,7 @@ string_proc_list_add_node_asm:
 .return_add_node:
     ret
 
-.string_proc_list_concat_asm:
+string_proc_list_concat_asm:
     ; ...
 .concat_loop:
     test r8, r8          
