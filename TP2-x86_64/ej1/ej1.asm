@@ -43,16 +43,20 @@ string_proc_list_create_asm:
 ;   hash = puntero (offset 24)
 ; ---------------------------------------------------------------
 string_proc_node_create_asm:
-    mov edi, 32         ; sizeof(string_proc_node) = 32 bytes
+    push rbx               ; Guardar RBX para preservar el valor de "type"
+    mov rbx, rdi           ; Copiar el valor original de "type" en RBX
+    mov edi, 32            ; Solicitar 32 bytes para el nodo
     call malloc           
     test rax, rax           
-    je .node_null
-    mov qword [rax], 0      ; node->next = 0
-    mov qword [rax+8], 0    ; node->previous = 0
-    mov byte [rax+16], dil  ; node->type = type (de dil)
-    mov qword [rax+24], rsi ; node->hash = hash (en rsi)
+    je .node_null_push
+    mov qword [rax], 0      ; node->next = NULL
+    mov qword [rax+8], 0    ; node->previous = NULL
+    mov byte [rax+16], bl  ; node->type = valor original (guardado en BL, de RBX)
+    mov qword [rax+24], rsi ; node->hash = hash (en RSI)
+    pop rbx                ; Restaurar RBX
     ret
-.node_null:
+.node_null_push:
+    pop rbx
     xor rax, rax    
     ret
 
