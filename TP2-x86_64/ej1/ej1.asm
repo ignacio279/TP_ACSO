@@ -76,6 +76,8 @@ string_proc_list_add_node_asm:
     ret
 
 string_proc_list_concat_asm:
+    push rbx              ; Preservamos RBX (callee-saved)
+    push r12              ; Preservamos R12 (callee-saved)
     ; Verificar que list y hash no sean NULL.
     test rdi, rdi
     je .return_concat_null
@@ -85,7 +87,7 @@ string_proc_list_concat_asm:
     ; r11 = list pointer
     mov r11, rdi
 
-    ; Guardar el parámetro "type" (que viene en RSI) en R12 para preservarlo.
+    ; Guardar el parámetro "type" (que viene en RSI) en R12.
     mov r12, rsi
 
     ; Llamar a strdup(hash)
@@ -114,7 +116,7 @@ string_proc_list_concat_asm:
     test rax, rax
     je .concat_fail         ; Si falla, liberar result y retornar NULL
 
-    ; Guardar el nuevo puntero en RBX antes de liberar el viejo result.
+    ; Guardar el nuevo puntero en RBX antes de llamar a free.
     mov rbx, rax            ; rbx = nuevo result
     mov rdi, r10
     call free               ; Liberar el antiguo result
@@ -127,6 +129,8 @@ string_proc_list_concat_asm:
 
 .end_concat_loop:
     mov rax, r10            ; Retornar result en RAX
+    pop r12
+    pop rbx
     ret
 
 .concat_fail:
@@ -134,4 +138,6 @@ string_proc_list_concat_asm:
     call free
 .return_concat_null:
     xor rax, rax           ; Retornar NULL (0)
+    pop r12
+    pop rbx
     ret
