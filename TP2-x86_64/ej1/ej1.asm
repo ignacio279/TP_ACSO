@@ -76,38 +76,59 @@ string_proc_list_add_node_asm:
     ret
 
 string_proc_list_concat_asm:
-    ; ...
+    ; Verificar que list y hash no sean NULL.
+    test rdi, rdi
+    je .return_concat_null
+    test rdx, rdx
+    je .return_concat_null
+
+    ; r11 = list pointer
+    mov r11, rdi
+
+    ; Llamar a strdup(hash)
+    mov rdi, rdx         ; parámetro: hash
+    call strdup
+    test rax, rax
+    je .return_concat_null
+    mov r10, rax         ; r10 = result (cadena acumulada)
+
+    ; Cargar el primer nodo: list->first (offset 0)
+    mov r8, qword [r11]  ; r8 = current_node
+
 .concat_loop:
-    test r8, r8          
+    test r8, r8          ; Si current_node es NULL, terminamos
     je .end_concat_loop
 
+    ; Comparar current_node->type (byte en [r8+16]) con type (parte baja de RSI en SIL)
     mov al, byte [r8+16]
     cmp al, sil
     jne .skip_concat
 
-    ; Preparar llamada a str_concat: str_concat(result, current_node->hash)
-    mov rdi, r10            ; result
-    mov rsi, qword [r8+24]   ; current_node->hash
+    ; Llamar a str_concat(result, current_node->hash)
+    mov rdi, r10             ; primer parámetro: result
+    mov rsi, qword [r8+24]    ; segundo parámetro: current_node->hash (offset 24)
     call str_concat
     test rax, rax
-    je .concat_fail
-    ; Guardamos el nuevo puntero en RBX antes de llamar a free.
-    mov rbx, rax            ; rbx = nuevo pointer
+    je .concat_fail         ; Si falla, liberar result y retornar NULL
+
+    ; Guardar el nuevo puntero en RBX antes de liberar el viejo result.
+    mov rbx, rax            ; rbx = nuevo result
     mov rdi, r10
-    call free
-    mov r10, rbx            ; r10 = nuevo result
+    call free               ; Liberar el antiguo result
+    mov r10, rbx            ; Actualizar result
 
 .skip_concat:
+    ; Avanzar al siguiente nodo (current_node->next, offset 0)
     mov r8, qword [r8]
     jmp .concat_loop
 
 .end_concat_loop:
-    mov rax, r10
+    mov rax, r10            ; Retornar result en RAX
     ret
 
 .concat_fail:
     mov rdi, r10
     call free
 .return_concat_null:
-    xor rax, rax      
+    xor rax, rax           ; Retornar NULL (0)
     ret
