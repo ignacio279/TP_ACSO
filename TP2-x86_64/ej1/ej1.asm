@@ -75,22 +75,8 @@ string_proc_list_add_node_asm:
 .return_add_node:
     ret
 
-string_proc_list_concat_asm:
-    test rdi, rdi
-    je .return_concat_null
-    test rdx, rdx
-    je .return_concat_null
-
-    mov r11, rdi         
-
-    mov rdi, rdx        
-    call strdup
-    test rax, rax
-    je .return_concat_null
-    mov r10, rax         
-
-    mov r8, qword [r11]  
-
+.string_proc_list_concat_asm:
+    ; ...
 .concat_loop:
     test r8, r8          
     je .end_concat_loop
@@ -99,16 +85,17 @@ string_proc_list_concat_asm:
     cmp al, sil
     jne .skip_concat
 
-    mov rdi, r10
-    mov rsi, qword [r8+24]
+    ; Preparar llamada a str_concat: str_concat(result, current_node->hash)
+    mov rdi, r10            ; result
+    mov rsi, qword [r8+24]   ; current_node->hash
     call str_concat
-
     test rax, rax
-    je .concat_fail    
-
+    je .concat_fail
+    ; Guardamos el nuevo puntero en RBX antes de llamar a free.
+    mov rbx, rax            ; rbx = nuevo pointer
     mov rdi, r10
     call free
-    mov r10, rax       
+    mov r10, rbx            ; r10 = nuevo result
 
 .skip_concat:
     mov r8, qword [r8]
