@@ -18,7 +18,6 @@ char* string_proc_list_concat(string_proc_list* list, uint8_t type , char* hash)
 void string_proc_list_destroy(string_proc_list* list){
 
 	/* borro los nodos: */
-	if (list == NULL) return;
 	string_proc_node* current_node	= list->first;
 	string_proc_node* next_node		= NULL;
 	while(current_node != NULL){
