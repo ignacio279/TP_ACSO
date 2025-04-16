@@ -11,6 +11,9 @@ string_proc_list* string_proc_list_create(void) {
 }
 
 string_proc_node* string_proc_node_create(uint8_t type, char* hash){
+	if (hash == NULL) {
+		return NULL;
+	}
 	string_proc_node* node = (string_proc_node*)malloc(sizeof(string_proc_node));
 	if (node == NULL) {
 		return NULL;
