@@ -172,8 +172,6 @@ string_proc_list_concat_asm:
     ret
 
 .concat_fail:
-    mov rdi, r10
-    call free
     jmp .return_concat_null_preserve  ; saltar al epílogo
 
 .return_concat_null_preserve:
