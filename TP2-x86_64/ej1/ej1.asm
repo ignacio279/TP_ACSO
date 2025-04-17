@@ -184,11 +184,25 @@ string_proc_list_concat_asm:
 
 .done:
     mov rax, r10
+    test rax, rax
+    je .fin
+
+    ; liberamos si no cambió
+    cmp rax, rdx         ; ¿sigue siendo el strdup del comienzo?
+    je .free_result      ; si sí, nunca fue modificado por str_concat
+
+.fin:
     pop r14
     pop r13
     pop r12
     pop rbx
     ret
+
+.free_result:
+    mov rdi, r10
+    call free
+    xor rax, rax
+    jmp .fin
 
 .fail_concat:
     ; Falló str_concat → liberar lo anterior y retornar NULL
