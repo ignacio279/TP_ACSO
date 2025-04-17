@@ -47,10 +47,17 @@ void test_create_list_add_nodes() {
     assert(list->first->next == list->last);
     assert(list->last->previous == list->first);
 
-    string_proc_list_add_node_asm(list, 3, "tres");
-    assert(strcmp(list->last->hash, "tres") == 0);
-    assert(list->last->previous != NULL);
-    assert(list->last->previous->previous == NULL);
+	string_proc_list_add_node_asm(list, 3, "tres");
+
+	printf("→ last: %s\n", list->last->hash);
+	printf("→ last->prev: %s\n", list->last->previous->hash);
+	if (list->last->previous->previous != NULL)
+		printf("❌ ERROR: last->prev->prev: %s\n", list->last->previous->previous->hash);
+	else
+		printf("✅ last->prev->prev == NULL\n");
+
+	assert(strcmp(list->last->hash, "tres") == 0);
+
 
     printf("✅ string_proc_list_add_node_asm pasó\n");
     string_proc_list_destroy(list);
