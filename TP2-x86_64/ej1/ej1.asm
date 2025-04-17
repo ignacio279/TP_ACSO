@@ -138,104 +138,71 @@ string_proc_list_concat_asm:
     push r13
     push r14
 
-    ; Verifica si lista o hash son NULL
     test rdi, rdi
-    je .error_null
+    je .return_null
     test rdx, rdx
-    je .error_null
+    je .return_null
 
     mov r14, rdi        ; r14 = list pointer
     mov r12, rsi        ; r12 = type
-    mov rdi, rdx        ; rdi = hash
-    call strdup         ; r10 = strdup(hash)
+    mov rdi, rdx
+    call strdup
     test rax, rax
-    je .error_null
-    mov r10, rax        ; r10 = resultado actual
+    je .return_null
 
-    mov r13, [r14]      ; r13 = current_node = list->first
+    mov r10, rax        ; r10 = result acumulado
+    mov r13, qword [r14] ; r13 = current node
+    mov r15, r10        ; r15 = strdup original
 
 .loop:
     test r13, r13
-    je .done
+    je .end
 
-    movzx eax, byte [r13+16] ; eax = current_node->type
+    mov al, byte [r13+16]
     cmp al, r12b
     jne .next
 
-    ; Concatenar si coincide el type
+    ; match: concatenar
     mov rdi, r10
-    mov rsi, [r13+24]   ; rsi = current_node->hash
+    mov rsi, qword [r13+24]
     call str_concat
     test rax, rax
-    je .fail_concat
+    je .fail
 
-    ; Si la nueva string es diferente, liberar la vieja
-    cmp rax, r10
-    je .skip_free
     mov rbx, rax
     mov rdi, r10
     call free
     mov r10, rbx
 
-.skip_free:
 .next:
-    mov r13, [r13]      ; avanzar al siguiente nodo
+    mov r13, qword [r13]
     jmp .loop
 
-.done:
+.end:
     mov rax, r10
-    test rax, rax
-    je .fin
 
-    ; liberamos si no cambió
-    cmp rax, rdx         ; ¿sigue siendo el strdup del comienzo?
-    je .free_result      ; si sí, nunca fue modificado por str_concat
+    ; Si no se concatenó nada, r10 sigue siendo igual al strdup original
+    cmp r10, r15
+    jne .clean
 
-.fin:
+    mov rdi, r10
+    call free
+    xor rax, rax        ; return NULL
+
+.clean:
     pop r14
     pop r13
     pop r12
     pop rbx
     ret
 
-.free_result:
+.fail:
     mov rdi, r10
     call free
-    xor rax, rax
-    jmp .fin
-
-.fail_concat:
-    ; Falló str_concat → liberar lo anterior y retornar NULL
-    mov rdi, r10
-    call free
-
-.error_null:
+.return_null:
     xor rax, rax
     pop r14
     pop r13
     pop r12
     pop rbx
     ret
-
-.end_concat_loop:
-    ; Si el resultado final sigue siendo el strdup inicial, hay que liberarlo
-    cmp r10, rax        ; rax todavía no está seteado
-    mov rax, r10        ; por convención, el resultado va en rax
-    cmp rax, rdx        ; rdx = hash original (strdup hecho al principio)
-    jne .return_success
-
-    ; Si nunca se modificó, hay que liberar lo que hizo strdup
-    mov rdi, r10
-    call free
-    xor rax, rax        ; retorno NULL porque no concatenó nada
-    jmp .clean_exit
-
-.return_success:
-.clean_exit:
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
-    ret
-
-    
