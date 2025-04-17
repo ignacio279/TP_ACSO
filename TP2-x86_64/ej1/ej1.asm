@@ -138,58 +138,51 @@ string_proc_list_concat_asm:
     push r13
     push r14
 
-    ; Verificar que list y hash no sean NULL
+    ; Verifica si lista o hash son NULL
     test rdi, rdi
-    je .return_concat_null_preserve
+    je .error_null
     test rdx, rdx
-    je .return_concat_null_preserve
+    je .error_null
 
-    mov r14, rdi         ; r14 = list
-    mov r12, rsi         ; r12 = type
-    mov rdi, rdx         ; strdup(hash)
-    call strdup
+    mov r14, rdi        ; r14 = list pointer
+    mov r12, rsi        ; r12 = type
+    mov rdi, rdx        ; rdi = hash
+    call strdup         ; r10 = strdup(hash)
     test rax, rax
-    je .return_concat_null_preserve
-    mov r10, rax         ; r10 = result (string acumulado)
+    je .error_null
+    mov r10, rax        ; r10 = resultado actual
 
-    ; r13 = list->first
-    mov r13, [r14]
+    mov r13, [r14]      ; r13 = current_node = list->first
 
-.concat_loop:
+.loop:
     test r13, r13
-    je .end_concat_loop
+    je .done
 
-    ; comparar type
-    mov al, byte [r13+16]
+    movzx eax, byte [r13+16] ; eax = current_node->type
     cmp al, r12b
-    jne .skip_concat
+    jne .next
 
-    ; llamar a str_concat(result, node->hash)
+    ; Concatenar si coincide el type
     mov rdi, r10
-    mov rsi, [r13+24]
+    mov rsi, [r13+24]   ; rsi = current_node->hash
     call str_concat
     test rax, rax
-    je .concat_fail
+    je .fail_concat
 
-    ; si rax == r10, no liberar
+    ; Si la nueva string es diferente, liberar la vieja
     cmp rax, r10
-    je .no_free_needed
-
-    ; free del anterior
+    je .skip_free
     mov rbx, rax
     mov rdi, r10
     call free
     mov r10, rbx
-    jmp .skip_concat
 
-.no_free_needed:
-    mov r10, rax
+.skip_free:
+.next:
+    mov r13, [r13]      ; avanzar al siguiente nodo
+    jmp .loop
 
-.skip_concat:
-    mov r13, [r13] ; avanzar a next
-    jmp .concat_loop
-
-.end_concat_loop:
+.done:
     mov rax, r10
     pop r14
     pop r13
@@ -197,19 +190,16 @@ string_proc_list_concat_asm:
     pop rbx
     ret
 
-.concat_fail:
-    ; Solo liberamos r10 si fue asignado por strdup y no es igual a rdx
-    test r10, r10
-    je .return_concat_null_preserve
-    cmp r10, rdx
-    je .return_concat_null_preserve
+.fail_concat:
+    ; Falló str_concat → liberar lo anterior y retornar NULL
     mov rdi, r10
     call free
 
-.return_concat_null_preserve:
+.error_null:
     xor rax, rax
     pop r14
     pop r13
     pop r12
     pop rbx
     ret
+    
