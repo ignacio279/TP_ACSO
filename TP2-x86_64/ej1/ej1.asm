@@ -216,4 +216,26 @@ string_proc_list_concat_asm:
     pop r12
     pop rbx
     ret
+
+.end_concat_loop:
+    ; Si el resultado final sigue siendo el strdup inicial, hay que liberarlo
+    cmp r10, rax        ; rax todavía no está seteado
+    mov rax, r10        ; por convención, el resultado va en rax
+    cmp rax, rdx        ; rdx = hash original (strdup hecho al principio)
+    jne .return_success
+
+    ; Si nunca se modificó, hay que liberar lo que hizo strdup
+    mov rdi, r10
+    call free
+    xor rax, rax        ; retorno NULL porque no concatenó nada
+    jmp .clean_exit
+
+.return_success:
+.clean_exit:
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
     
