@@ -121,84 +121,69 @@ string_proc_list_concat_asm:
     push r12
     push r13
     push r14
-    push r15    ; <- también preservamos r15 (lo vamos a usar)
 
-    ; Verificar que list y hash no sean NULL
     test rdi, rdi
-    je .return_concat_null_preserve
+    je .return_null
     test rdx, rdx
-    je .return_concat_null_preserve
+    je .return_null
 
-    mov r14, rdi    ; list
-    mov r12, rsi    ; type
+    mov r14, rdi         ; r14 = list pointer
+    mov r12, rsi         ; r12 = type
 
     mov rdi, rdx
     call strdup
     test rax, rax
-    je .return_concat_null_preserve
+    je .return_null
+    mov r10, rax         ; r10 = result
+    mov r15, r10         ; guardamos original
 
-    mov r10, rax    ; result acumulado
-    mov r15, r10    ; guardamos strdup original para comparación final
-    mov r13, [r14]  ; current_node = list->first
+    mov r13, qword [r14] ; r13 = current node
 
-.concat_loop:
+.loop:
     test r13, r13
-    je .end_concat_loop
+    je .end
 
     mov al, byte [r13+16]
     cmp al, r12b
-    jne .skip_concat
+    jne .next
 
-    ; Concatenar
+    ; str_concat(r10, r13->hash)
     mov rdi, r10
-    mov rsi, [r13+24]
+    mov rsi, qword [r13+24]
     call str_concat
     test rax, rax
-    je .concat_fail
+    je .fail
 
-    ; solo liberar si r10 y rax son distintos
-    cmp r10, rax
-    je .no_free
+    ; evitar doble free
+    cmp rax, r10
+    je .next
+
+    ; liberar solo si son distintos
     mov rdi, r10
     call free
-.no_free:
+
     mov r10, rax
 
-.skip_concat:
-    mov r13, [r13] ; avanzar a next
-    jmp .concat_loop
+.next:
+    mov r13, qword [r13]
+    jmp .loop
 
-.end_concat_loop:
-    ; si no se concatenó nada, liberamos strdup y devolvemos NULL
-    cmp r10, r15
-    jne .return_result
-    mov rdi, r10
-    call free
-    xor rax, rax
-    jmp .return_done
-
-.return_result:
+.end:
     mov rax, r10
-
-.return_done:
-    pop r15
     pop r14
     pop r13
     pop r12
     pop rbx
     ret
 
-.concat_fail:
-    test r10, r10
-    je .return_concat_null_preserve
-    cmp r10, r15
-    je .return_concat_null_preserve
+.fail:
+    cmp r10, 0
+    je .return_null
     mov rdi, r10
     call free
 
-.return_concat_null_preserve:
+.return_null:
     xor rax, rax
-    pop r15
     pop r14
     pop r13
     pop r12
