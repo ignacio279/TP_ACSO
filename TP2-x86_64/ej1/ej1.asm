@@ -140,16 +140,16 @@ string_proc_list_concat_asm:
     test rdx, rdx
     je .return_concat_null_preserve
 
-    mov r14, rdi
-    mov r12, rsi
+    mov r14, rdi         ; r14 = list pointer
+    mov r12, rsi         ; r12 = type
 
     mov rdi, rdx
     call strdup
     test rax, rax
     je .return_concat_null_preserve
-    mov r10, rax
+    mov r10, rax         ; r10 = result (malloc'd string)
 
-    mov r13, qword [r14]
+    mov r13, qword [r14] ; r13 = current_node
 
 .concat_loop:
     test r13, r13
@@ -159,21 +159,24 @@ string_proc_list_concat_asm:
     cmp al, r12b
     jne .skip_concat
 
+    ; Llamar a str_concat(result, node->hash)
     mov rdi, r10
     mov rsi, qword [r13+24]
     call str_concat
     test rax, rax
     je .concat_fail
 
-    cmp rax, r10         ; si str_concat no cambió el puntero, no liberes
-    je .no_free
+    cmp rax, r10
+    je .no_free_needed
+
+    ; liberar el antiguo result
     mov rbx, rax
     mov rdi, r10
     call free
     mov r10, rbx
     jmp .skip_concat
 
-.no_free:
+.no_free_needed:
     mov r10, rax
 
 .skip_concat:
@@ -191,12 +194,10 @@ string_proc_list_concat_asm:
 .concat_fail:
     test r10, r10
     je .return_concat_null_preserve
-    cmp r10, rax         ; si str_concat falló pero r10 no cambió, no liberes
+    cmp r10, rax
     je .return_concat_null_preserve
     mov rdi, r10
     call free
-    jmp .return_concat_null_preserve
-
 
 .return_concat_null_preserve:
     xor rax, rax
