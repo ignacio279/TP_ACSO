@@ -122,53 +122,65 @@ string_proc_list_concat_asm:
     push r13
     push r14
 
+    ; Verificar que list y hash no sean NULL
     test rdi, rdi
-    je .return_null
+    je .return_concat_null_preserve
     test rdx, rdx
-    je .return_null
+    je .return_concat_null_preserve
 
-    mov r14, rdi         ; r14 = list pointer
-    mov r12, rsi         ; r12 = type
+    ; Validar que el string hash esté bien formado y tenga \0
+    mov rax, rdx        ; rax = hash
+    mov rcx, 0          ; contador de caracteres
 
+.validar_hash:
+    cmp byte [rax], 0
+    je .hash_ok
+    inc rax
+    inc rcx
+    cmp rcx, 512        ; limite razonable
+    ja .return_concat_null_preserve
+    jmp .validar_hash
+
+.hash_ok:
+    ; Guardar registros útiles
+    mov r14, rdi        ; lista
+    mov r12, rsi        ; tipo
+
+    ; Llamar a strdup(hash)
     mov rdi, rdx
     call strdup
     test rax, rax
-    je .return_null
-    mov r10, rax         ; r10 = result
-    mov r15, r10         ; guardamos original
+    je .return_concat_null_preserve
+    mov r10, rax        ; r10 = resultado acumulado
 
-    mov r13, qword [r14] ; r13 = current node
+    mov r13, qword [r14] ; r13 = list->first
 
-.loop:
+.concat_loop:
     test r13, r13
-    je .end
+    je .end_concat_loop
 
+    ; comparar tipo
     mov al, byte [r13+16]
     cmp al, r12b
-    jne .next
+    jne .skip_concat
 
-    ; str_concat(r10, r13->hash)
+    ; str_concat(result, node->hash)
     mov rdi, r10
     mov rsi, qword [r13+24]
     call str_concat
     test rax, rax
-    je .fail
+    je .concat_fail
 
-    ; evitar doble free
-    cmp rax, r10
-    je .next
-
-    ; liberar solo si son distintos
+    mov rbx, rax
     mov rdi, r10
     call free
+    mov r10, rbx
 
-    mov r10, rax
-
-.next:
+.skip_concat:
     mov r13, qword [r13]
-    jmp .loop
+    jmp .concat_loop
 
-.end:
+.end_concat_loop:
     mov rax, r10
     pop r14
     pop r13
@@ -176,13 +188,11 @@ string_proc_list_concat_asm:
     pop rbx
     ret
 
-.fail:
-    cmp r10, 0
-    je .return_null
+.concat_fail:
     mov rdi, r10
     call free
 
-.return_null:
+.return_concat_null_preserve:
     xor rax, rax
     pop r14
     pop r13
