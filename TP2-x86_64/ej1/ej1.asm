@@ -75,36 +75,38 @@ string_proc_node_create_asm:
 ; Si ya tiene nodos, lo enlaza al final.
 ; ---------------------------------------------------------------
 string_proc_list_add_node_asm:
-    ; rdi=list, rsi=type, rdx=hash
+    ; rdi = list, rsi = type, rdx = hash
     push r12
     push r13
     push r14
 
-    mov r12, rdi          ; list
-    movzx r13, sil        ; type (8 bits)
-    mov r14, rdx          ; hash
+    mov r12, rdi          ; r12 = list
+    movzx r13, sil        ; r13 = type (zero-extend a 64 bits)
+    mov r14, rdx          ; r14 = hash
 
-    ; llamo a crear nodo con parámetros seguros:
-    movzx rdi, r13b       ; type
-    mov rsi, r14          ; hash
+    ; llamar a string_proc_node_create_asm(r13, r14)
+    movzx rdi, r13b       ; type → rdi
+    mov rsi, r14          ; hash → rsi
     call string_proc_node_create_asm
     test rax, rax
-    je .return_add_node
+    je .return_add_node   ; si malloc falló
 
-    mov rdx, rax          ; nuevo nodo
-    mov rax, qword [r12+8] ; list->last
+    mov rdx, rax          ; rdx = new_node
+    mov rax, qword [r12+8] ; rax = list->last
+
     test rax, rax
     je .empty_list
 
-    ; si lista no vacía:
-    mov qword [rdx+8], rax ; new_node->previous = list->last
-    mov qword [rax], rdx   ; list->last->next = new_node
-    mov qword [r12+8], rdx ; list->last = new_node
+    ; caso: lista NO vacía
+    mov qword [rdx+8], rax    ; new_node->previous = list->last
+    mov qword [rax+0], rdx    ; list->last->next = new_node
+    mov qword [r12+8], rdx    ; list->last = new_node
     jmp .return_add_node_done
 
 .empty_list:
-    mov qword [r12], rdx   ; list->first = new_node
-    mov qword [r12+8], rdx ; list->last = new_node
+    ; caso: lista vacía
+    mov qword [r12], rdx      ; list->first = new_node
+    mov qword [r12+8], rdx    ; list->last = new_node
 
 .return_add_node_done:
 .return_add_node:
@@ -112,6 +114,7 @@ string_proc_list_add_node_asm:
     pop r13
     pop r12
     ret
+
 
 ; ---------------------------------------------------------------
 ; string_proc_list_concat_asm:
