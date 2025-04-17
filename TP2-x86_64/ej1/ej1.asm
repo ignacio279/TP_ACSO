@@ -42,19 +42,29 @@ string_proc_list_create_asm:
 ;   type = valor (offset 16, 1 byte)
 ;   hash = puntero (offset 24)
 ; ---------------------------------------------------------------
+; string_proc_node_create_asm(RDI=type, RSI=hash)
 string_proc_node_create_asm:
-    mov edi, 32         ; sizeof(string_proc_node) = 32 bytes
-    call malloc           
-    test rax, rax           
+    push rbp
+    mov rbp, rsp
+
+    mov edi, 32          ; sizeof(node)
+    call malloc
+    test rax, rax
     je .node_null
-    mov qword [rax], 0      ; node->next = 0
-    mov qword [rax+8], 0    ; node->previous = 0
-    mov byte [rax+16], dil  ; node->type = type (de dil)
-    mov qword [rax+24], rsi ; node->hash = hash (en rsi)
+
+    mov qword [rax], 0         ; next
+    mov qword [rax+8], 0       ; previous
+    mov byte [rax+16], dil     ; type (está en rdi originalmente)
+    mov qword [rax+24], rsi    ; hash (correcto)
+
+    leave
     ret
+
 .node_null:
-    xor rax, rax    
+    xor rax, rax
+    leave
     ret
+
 
 ; ---------------------------------------------------------------
 ; string_proc_list_add_node_asm:
