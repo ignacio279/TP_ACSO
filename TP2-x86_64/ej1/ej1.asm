@@ -198,8 +198,7 @@ string_proc_list_concat_asm:
     ret
 
 .concat_fail:
-    ; Si r10 es no nulo, lo liberamos
-    ; pero solo si r10 ≠ rdx (input original)
+    ; Solo liberamos r10 si fue asignado por strdup y no es igual a rdx
     test r10, r10
     je .return_concat_null_preserve
     cmp r10, rdx
