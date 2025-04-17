@@ -196,11 +196,15 @@ string_proc_list_concat_asm:
     ret
 
 .fail:
-    ; liberar solo si r10 es distinto de r15
     cmp r10, r15
-    je .no_free_fail
+    jne .safe_to_free
+    jmp .return_null
+
+.safe_to_free:
     mov rdi, r10
     call free
+    jmp .return_null
+
 .no_free_fail:
 .return_null:
     xor rax, rax
