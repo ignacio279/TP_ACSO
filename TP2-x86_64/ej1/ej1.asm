@@ -44,25 +44,21 @@ string_proc_list_create_asm:
 ; ---------------------------------------------------------------
 ; string_proc_node_create_asm(RDI=type, RSI=hash)
 string_proc_node_create_asm:
-    push rbp
-    mov rbp, rsp
-
-    mov edi, 32          ; sizeof(node)
+    ; rdi = type (uint8_t), rsi = hash (char*)
+    mov edi, 32
     call malloc
     test rax, rax
     je .node_null
 
-    mov qword [rax], 0         ; next
-    mov qword [rax+8], 0       ; previous
-    mov byte [rax+16], dil     ; type (está en rdi originalmente)
-    mov qword [rax+24], rsi    ; hash (correcto)
+    mov qword [rax], 0        ; next
+    mov qword [rax+8], 0      ; previous
+    mov byte [rax+16], dil    ; type en dil (correcto)
+    mov qword [rax+24], rsi   ; hash
 
-    leave
     ret
 
 .node_null:
     xor rax, rax
-    leave
     ret
 
 
