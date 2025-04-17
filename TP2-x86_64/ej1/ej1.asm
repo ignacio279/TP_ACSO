@@ -198,10 +198,11 @@ string_proc_list_concat_asm:
     ret
 
 .concat_fail:
-    ; liberar r10 si no es NULL y distinto de rax
+    ; Si r10 es no nulo, lo liberamos
+    ; pero solo si r10 ≠ rdx (input original)
     test r10, r10
     je .return_concat_null_preserve
-    cmp r10, rax
+    cmp r10, rdx
     je .return_concat_null_preserve
     mov rdi, r10
     call free

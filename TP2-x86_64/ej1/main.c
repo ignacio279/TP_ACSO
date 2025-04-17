@@ -51,10 +51,16 @@ void test_create_list_add_nodes() {
 
 	printf("→ last: %s\n", list->last->hash);
 	printf("→ last->prev: %s\n", list->last->previous->hash);
+		printf("→ last: %s\n", list->last->hash);
+	printf("→ last->prev: %s\n", list->last->previous->hash);
+
 	if (list->last->previous->previous != NULL)
-		printf("❌ ERROR: last->prev->prev: %s\n", list->last->previous->previous->hash);
+		printf("→ last->prev->prev: %s\n", list->last->previous->previous->hash);
 	else
-		printf("✅ last->prev->prev == NULL\n");
+		assert(0 && "last->prev->prev debería existir (debería ser 'uno')");
+
+	assert(list->last->previous->previous->previous == NULL);
+	printf("✅ list encadenada correctamente\n");
 
 	assert(strcmp(list->last->hash, "tres") == 0);
 
