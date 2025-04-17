@@ -75,37 +75,42 @@ string_proc_node_create_asm:
 ; Si ya tiene nodos, lo enlaza al final.
 ; ---------------------------------------------------------------
 string_proc_list_add_node_asm:
-    test rdi, rdi
-    je .return_add_node      
+    ; rdi=list, rsi=type, rdx=hash
+    push r12
+    push r13
+    push r14
 
-    mov r8, rdi              ; r8 = pointer a list
+    mov r12, rdi          ; list
+    movzx r13, sil        ; type (8 bits)
+    mov r14, rdx          ; hash
 
-    ; Preparar parámetros para crear el nodo:
-    ; Pasar RSI = type, RDX = hash. Llamamos a string_proc_node_create_asm.
-    mov rdi, rsi            ; rdi = type
-    mov rsi, rdx            ; rsi = hash
+    ; llamo a crear nodo con parámetros seguros:
+    movzx rdi, r13b       ; type
+    mov rsi, r14          ; hash
     call string_proc_node_create_asm
-    test rax, rax            
-    je .return_add_node
-    mov r9, rax             ; r9 = new node
-
-    ; Revisar si la lista no está vacía: list->last se encuentra en [r8+8].
-    mov rax, qword [r8+8]    
     test rax, rax
-    je .empty_list           
+    je .return_add_node
 
-    ; Si la lista no está vacía:
-    mov qword [r9+8], rax   ; new_node->previous = list->last
-    mov qword [rax], r9     ; list->last->next = new_node
-    mov qword [r8+8], r9    ; list->last = new_node
+    mov rdx, rax          ; nuevo nodo
+    mov rax, qword [r12+8] ; list->last
+    test rax, rax
+    je .empty_list
+
+    ; si lista no vacía:
+    mov qword [rdx+8], rax ; new_node->previous = list->last
+    mov qword [rax], rdx   ; list->last->next = new_node
+    mov qword [r12+8], rdx ; list->last = new_node
     jmp .return_add_node_done
 
 .empty_list:
-    mov qword [r8], r9      ; list->first = new_node
-    mov qword [r8+8], r9    ; list->last = new_node
+    mov qword [r12], rdx   ; list->first = new_node
+    mov qword [r12+8], rdx ; list->last = new_node
 
 .return_add_node_done:
 .return_add_node:
+    pop r14
+    pop r13
+    pop r12
     ret
 
 ; ---------------------------------------------------------------
