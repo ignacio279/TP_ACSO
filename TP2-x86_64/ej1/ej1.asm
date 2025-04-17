@@ -121,66 +121,67 @@ string_proc_list_concat_asm:
     push r12
     push r13
     push r14
+    push r15    ; <- también preservamos r15 (lo vamos a usar)
 
-    ; Verificar que list y hash no sean NULL.
+    ; Verificar que list y hash no sean NULL
     test rdi, rdi
     je .return_concat_null_preserve
     test rdx, rdx
     je .return_concat_null_preserve
 
-    ; Guardar parámetros
-    mov r14, rdi        ; lista
-    mov r12, rsi        ; type
+    mov r14, rdi    ; list
+    mov r12, rsi    ; type
 
-    ; Duplicar la semilla
     mov rdi, rdx
     call strdup
     test rax, rax
     je .return_concat_null_preserve
-    mov r10, rax        ; r10 = result
-    mov r15, r10        ; r15 = strdup original (para detectar si cambió)
 
-    ; Primer nodo
-    mov r13, qword [r14] ; list->first
+    mov r10, rax    ; result acumulado
+    mov r15, r10    ; guardamos strdup original para comparación final
+    mov r13, [r14]  ; current_node = list->first
 
 .concat_loop:
     test r13, r13
     je .end_concat_loop
 
-    ; Comparar type
     mov al, byte [r13+16]
     cmp al, r12b
     jne .skip_concat
 
-    ; Obtener el hash del nodo
-    mov rsi, qword [r13+24]
-    test rsi, rsi
-    je .skip_concat
-
-    ; Llamar a str_concat(result, node->hash)
+    ; Concatenar
     mov rdi, r10
+    mov rsi, [r13+24]
     call str_concat
     test rax, rax
     je .concat_fail
 
-    ; Si cambió el puntero de result, liberar el viejo
-    cmp rax, r10
-    je .skip_free
-
+    ; solo liberar si r10 y rax son distintos
+    cmp r10, rax
+    je .no_free
     mov rdi, r10
     call free
-    mov r10, rax
-    jmp .skip_concat
-
-.skip_free:
+.no_free:
     mov r10, rax
 
 .skip_concat:
-    mov r13, qword [r13] ; avanzar al siguiente nodo
+    mov r13, [r13] ; avanzar a next
     jmp .concat_loop
 
 .end_concat_loop:
+    ; si no se concatenó nada, liberamos strdup y devolvemos NULL
+    cmp r10, r15
+    jne .return_result
+    mov rdi, r10
+    call free
+    xor rax, rax
+    jmp .return_done
+
+.return_result:
     mov rax, r10
+
+.return_done:
+    pop r15
     pop r14
     pop r13
     pop r12
@@ -197,6 +198,7 @@ string_proc_list_concat_asm:
 
 .return_concat_null_preserve:
     xor rax, rax
+    pop r15
     pop r14
     pop r13
     pop r12
