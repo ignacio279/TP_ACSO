@@ -137,7 +137,9 @@ string_proc_list_concat_asm:
     push r12
     push r13
     push r14
+    push r15
 
+    ; Validar que list y hash no sean NULL
     test rdi, rdi
     je .return_null
     test rdx, rdx
@@ -145,14 +147,14 @@ string_proc_list_concat_asm:
 
     mov r14, rdi        ; r14 = list pointer
     mov r12, rsi        ; r12 = type
-    mov rdi, rdx
+    mov rdi, rdx        ; rdi = hash
     call strdup
     test rax, rax
     je .return_null
 
     mov r10, rax        ; r10 = result acumulado
+    mov r15, r10        ; r15 = strdup original (para comparación)
     mov r13, qword [r14] ; r13 = current node
-    mov r15, r10        ; r15 = strdup original
 
 .loop:
     test r13, r13
@@ -162,42 +164,31 @@ string_proc_list_concat_asm:
     cmp al, r12b
     jne .next
 
-    ; match: concatenar
+    ; rdi = result acumulado, rsi = node->hash
     mov rdi, r10
     mov rsi, qword [r13+24]
     call str_concat
     test rax, rax
     je .fail
 
-    call str_concat
-    test rax, rax
-    je .fail
-
-    cmp r10, rax
-    je .no_free_needed   ; si str_concat devolvió el mismo puntero, no hay que liberar
+    ; Solo hacer free si r10 != r15 (evita liberar el strdup original más de una vez)
+    mov rbx, rax
+    cmp r10, r15
+    je .skip_free
 
     mov rdi, r10
     call free
 
-.no_free_needed:
-    mov r10, rax
+.skip_free:
+    mov r10, rbx
 
 .next:
-    mov r13, qword [r13]
+    mov r13, qword [r13]    ; avanzar al siguiente nodo
     jmp .loop
 
 .end:
     mov rax, r10
-
-    ; Si no se concatenó nada, r10 sigue siendo igual al strdup original
-    cmp r10, r15
-    jne .clean
-
-    mov rdi, r10
-    call free
-    xor rax, rax        ; return NULL
-
-.clean:
+    pop r15
     pop r14
     pop r13
     pop r12
@@ -205,10 +196,15 @@ string_proc_list_concat_asm:
     ret
 
 .fail:
+    ; liberar solo si r10 es distinto de r15
+    cmp r10, r15
+    je .no_free_fail
     mov rdi, r10
     call free
+.no_free_fail:
 .return_null:
     xor rax, rax
+    pop r15
     pop r14
     pop r13
     pop r12
