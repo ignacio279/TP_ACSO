@@ -169,10 +169,18 @@ string_proc_list_concat_asm:
     test rax, rax
     je .fail
 
-    mov rbx, rax
+    call str_concat
+    test rax, rax
+    je .fail
+
+    cmp r10, rax
+    je .no_free_needed   ; si str_concat devolvió el mismo puntero, no hay que liberar
+
     mov rdi, r10
     call free
-    mov r10, rbx
+
+.no_free_needed:
+    mov r10, rax
 
 .next:
     mov r13, qword [r13]
