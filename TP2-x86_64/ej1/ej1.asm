@@ -137,78 +137,62 @@ string_proc_list_concat_asm:
     push r12
     push r13
     push r14
-    push r15
 
-    ; Validar que list y hash no sean NULL
     test rdi, rdi
-    je .return_null
+    je .return_concat_null_preserve
     test rdx, rdx
-    je .return_null
+    je .return_concat_null_preserve
 
-    mov r14, rdi        ; r14 = list pointer
-    mov r12, rsi        ; r12 = type
-    mov rdi, rdx        ; rdi = hash
+    mov r14, rdi         ; r14 = list
+    mov r12, rsi         ; r12 = type
+
+    mov rdi, rdx         ; strdup(hash)
     call strdup
     test rax, rax
-    je .return_null
+    je .return_concat_null_preserve
 
-    mov r10, rax        ; r10 = result acumulado
-    mov r15, r10        ; r15 = strdup original (para comparación)
-    mov r13, qword [r14] ; r13 = current node
+    mov r10, rax         ; r10 = result
+    mov r13, qword [r14] ; r13 = list->first
 
-.loop:
+.concat_loop:
     test r13, r13
-    je .end
+    je .end_concat_loop
 
     mov al, byte [r13+16]
     cmp al, r12b
-    jne .next
+    jne .skip_concat
 
-    ; rdi = result acumulado, rsi = node->hash
     mov rdi, r10
     mov rsi, qword [r13+24]
     call str_concat
     test rax, rax
-    je .fail
+    je .concat_fail
 
-    ; Solo hacer free si r10 != r15 (evita liberar el strdup original más de una vez)
     mov rbx, rax
-    cmp r10, r15
-    je .skip_free
-
     mov rdi, r10
     call free
-
-.skip_free:
     mov r10, rbx
 
-.next:
-    mov r13, qword [r13]    ; avanzar al siguiente nodo
-    jmp .loop
+.skip_concat:
+    mov r13, qword [r13]
+    jmp .concat_loop
 
-.end:
+.end_concat_loop:
     mov rax, r10
-    pop r15
     pop r14
     pop r13
     pop r12
     pop rbx
     ret
 
-.fail:
-    cmp r10, r15
-    jne .safe_to_free
-    jmp .return_null
-
-.safe_to_free:
+.concat_fail:
+    test r10, r10         ; asegurarse de que r10 no sea NULL
+    je .return_concat_null_preserve
     mov rdi, r10
     call free
-    jmp .return_null
 
-.no_free_fail:
-.return_null:
+.return_concat_null_preserve:
     xor rax, rax
-    pop r15
     pop r14
     pop r13
     pop r12
