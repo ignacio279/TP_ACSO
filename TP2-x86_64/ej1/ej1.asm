@@ -165,14 +165,16 @@ string_proc_list_concat_asm:
     test rax, rax
     je .concat_fail
 
+    cmp rax, r10         ; si str_concat no cambió el puntero, no liberes
+    je .no_free
     mov rbx, rax
-
-    test r10, r10
-    je .skip_free
     mov rdi, r10
     call free
-.skip_free:
     mov r10, rbx
+    jmp .skip_concat
+
+.no_free:
+    mov r10, rax
 
 .skip_concat:
     mov r13, qword [r13]
@@ -189,8 +191,12 @@ string_proc_list_concat_asm:
 .concat_fail:
     test r10, r10
     je .return_concat_null_preserve
+    cmp r10, rax         ; si str_concat falló pero r10 no cambió, no liberes
+    je .return_concat_null_preserve
     mov rdi, r10
     call free
+    jmp .return_concat_null_preserve
+
 
 .return_concat_null_preserve:
     xor rax, rax
