@@ -1,0 +1,39 @@
+Ignacio Vargas Fernandez
+ivargasfernandez@udesa.edu.ar
+
+PHASE_1
+Al desensamblar la phase_1, noté que se le pasaba el input del usuario como primer argumento a la función strings_not_equal, junto con una cadena constante ubicada en la dirección 0x4c9a58. Usando GDB con x/s 0x4c9a58, vi que la cadena era:
+"Los hermanos sean unidos porque esa es la ley primera porque si entre ellos se pelean los devoran los de ajuera"
+El código explota la bomba si los strings no coinciden (jne en la línea <+22>), así que simplemente ingresé exactamente esa frase como input para desactivar la fase.
+
+PHASE_2 
+
+En esta fase, el programa toma dos números enteros como entrada. Para obtenerlos, el código utiliza la función strtoq, que convierte strings en números. Luego, guarda estos valores en dos variables y realiza una serie de chequeos para verificar si cumplen ciertas condiciones específicas.
+
+Primero, el programa evalúa si el producto entre ambos números es distinto de cero. Esto quiere decir que ninguno de los dos puede ser igual a cero, ya que eso provocaría la explosión de la bomba. A continuación, se verifica si la suma entre ambos números es igual a 0x3d83, que en decimal equivale a 15747. Finalmente, se llama a una función llamada misterio, que simplemente realiza un XOR entre ambos valores y verifica que el resultado sea negativo. Si el resultado del XOR no es negativo, también se detona la bomba.
+
+La solución consiste en encontrar dos números que cumplan las tres condiciones anteriores. Para ello, elegí los valores -1 y 15748. Estos dos números multiplicados no dan cero (ya que -1 * 15748 = -15748), su suma es exactamente 15747 (-1 + 15748 = 15747), y además, el resultado del XOR (-1 ^ 15748) es un número negativo, cumpliendo así con la condición requerida por la función misterio.
+
+PHASE_3
+
+En la fase 3, el programa espera como entrada dos valores: un string y un número. Si el formato no se respeta, la bomba explota. Tras parsear la entrada, se llama a la función readlines, que carga una lista de strings desde un archivo externo. Luego, la función cuenta procesa estos valores aplicando una lógica de búsqueda recursiva que recuerda a una búsqueda binaria. El objetivo es que dicha función devuelva exactamente el valor 0x270f (9999 en decimal), y además, que ese número coincida con el valor ingresado como segundo parámetro. Si se cumple esta condición, el programa continúa y libera correctamente la memoria utilizada.
+
+La solución para esta fase consiste en ingresar como string "aboquillar" y como número 10692. Este input logra que cuenta devuelva 9999 y que dicho número coincida con el valor ingresado, por lo que la bomba no explota.
+
+Sin embargo, esta fase tiene una particularidad importante: si se ingresan tres valores (es decir, si el usuario proporciona una línea con formato %s %d %s), y el tercer string es exactamente "abrete_sesamo", el programa detecta esta condición y activa una fase secreta. Esta funcionalidad está oculta dentro de la función phase_defused, la cual verifica si el contador de inputs leídos es 4 y el tercer string coincide con la palabra clave. De este modo, el input "aboquillar 10692 abrete_sesamo" permite acceder a la secret_phase, la cual solo puede ser activada desde aquí, sin necesidad de pasar las demás fases.
+
+PHASE_4 
+
+En la fase 4, el programa primero verifica que la entrada sea una cadena de exactamente seis caracteres. Si no se cumple esta condición, se llama a la función `explode_bomb`, lo que indica que cualquier desviación del largo esperado causa un fallo inmediato. Esta validación se hace utilizando una función de longitud de cadena.
+
+Una vez que se confirma el largo correcto, el programa procede a analizar carácter por carácter. Para cada uno, extrae sus últimos cuatro bits mediante una operación `AND` con `0xF`, lo que equivale a tomar su valor módulo 16. Este número se usa como índice para acceder a un arreglo de 16 enteros ubicado en memoria. El valor obtenido del arreglo en esa posición se suma a un acumulador que comienza en cero.
+
+Después de procesar los seis caracteres, se verifica si la suma acumulada es igual a `0x3E`, es decir, 62 en decimal. Si no se alcanza ese valor exacto, también se activa la bomba. Esto implica que la clave está en encontrar una combinación de seis caracteres tal que, al aplicarles la transformación mencionada y sumar los valores resultantes del arreglo, el total sea exactamente 62.
+
+La cadena que cumple con esta condición es `013679`. Cada uno de estos caracteres tiene un valor ASCII cuyo residuo módulo 16 corresponde a índices específicos del arreglo. La suma de los valores en esas posiciones da como resultado 62, cumpliendo con el requerimiento del programa. Por eso, esta es la solución correcta para desactivar la fase 4 sin explotar la bomba.
+
+SECRET_PHASE 
+Esta fase no se activa automáticamente. Como se mencionó, la activé manualmente durante la phase_3 con un input especial que incluía la palabra clave "abrete_sesamo".
+Una vez activada, el programa pide un número, lo convierte con strtoq, y luego lo pasa como argumento a la función recursiva fun7, que recorre un árbol binario comenzando desde la dirección de memoria 0x4f91f0 (etiquetada como n1).
+El objetivo ahora es que fun7 devuelva 6 (cmp eax, 0x6). Como el recorrido en fun7 representa un camino codificado en binario donde ir a la izquierda es *2 y a la derecha es *2 + 1, me propuse encontrar el nodo tal que el camino recorrido hasta él devuelva 6.
+Usando GDB, inspeccioné los punteros desde n1, siguiendo el árbol según los bits de 6 (110 en binario: derecha, derecha, izquierda), y encontré que el nodo con valor 35 es el correcto.
