@@ -4,7 +4,6 @@
 %define FALSE 0
 
 section .data
-empty_string: db 0
 
 section .text
 
@@ -94,6 +93,7 @@ string_proc_list_add_node_asm:
     pop     rbx
     ret
 
+
 ; ---------------------------------------------------------------
 ; string_proc_list_concat_asm:
 ; Parámetros:
@@ -111,39 +111,75 @@ string_proc_list_add_node_asm:
 ; Se preservan los registros no volátiles: RBX, R12, R13 y se copia list pointer en R14.
 ; ---------------------------------------------------------------
 string_proc_list_concat_asm:
-    push    rbx
-    push    r12
-    mov     rbx, rdi            ; lista
-    mov     r12b, sil           ; type a buscar
-    mov     r13, rdx            ; string a concatenar
+    push rbx
+    push r12
+    push r13
+    push r14
 
-    mov     rdi, empty_string
-    mov     rsi, r13
-    call    str_concat
-    mov     r14, rax            ; acumulador
+    test rdi, rdi
+    je .return_null
+    test rdx, rdx
+    je .return_null
 
-    mov     r15, [rbx]          ; head
+    mov r14, rdi         ; r14 = list pointer
+    mov r12, rsi         ; r12 = type
+
+    mov rdi, rdx
+    call strdup
+    test rax, rax
+    je .return_null
+    mov r10, rax         ; r10 = result
+    mov r15, r10         ; guardamos original
+
+    mov r13, qword [r14] ; r13 = current node
 
 .loop:
-    test    r15, r15
-    jz      .done
-    movzx   eax, byte [r15 + 16]
-    cmp     al, r12b
-    jne     .skip
-    ; concat
-    mov     rdi, r14
-    mov     rsi, [r15 + 24]
-    call    str_concat
-    mov     rdx, r14
-    mov     r14, rax
-    mov     rdi, rdx
-    call    free
-.skip:
-    mov     r15, [r15]
-    jmp     .loop
+    test r13, r13
+    je .end
 
-.done:
-    mov     rax, r14
-    pop     r12
-    pop     rbx
+    mov al, byte [r13+16]
+    cmp al, r12b
+    jne .next
+
+    ; str_concat(r10, r13->hash)
+    mov rdi, r10
+    mov rsi, qword [r13+24]
+    call str_concat
+    test rax, rax
+    je .fail
+
+    ; evitar doble free
+    cmp rax, r10
+    je .next
+
+    ; liberar solo si son distintos
+    mov rdi, r10
+    call free
+
+    mov r10, rax
+
+.next:
+    mov r13, qword [r13]
+    jmp .loop
+
+.end:
+    mov rax, r10
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+.fail:
+    cmp r10, 0
+    je .return_null
+    mov rdi, r10
+    call free
+
+.return_null:
+    xor rax, rax
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
     ret
