@@ -13,6 +13,7 @@ global string_proc_list_concat_asm
 extern malloc
 extern free
 extern str_concat
+extern strdup
 
 
 string_proc_list_create_asm:
@@ -30,25 +31,58 @@ string_proc_list_create_asm:
 
 
 ; ---------------------------------------------------------------
-; string_proc_node_create_asm
-;    RDI = uint8_t type
-;    RSI = char*   hash
+; string_proc_node_create_asm “disfrazada”
+;   RDI = uint8_t type
+;   RSI = char*   hash
 ; ---------------------------------------------------------------
 string_proc_node_create_asm:
-    mov     edi, 32           ; sizeof(string_proc_node)
+    ; — Prologue con RBP —
+    push    rbp
+    mov     rbp, rsp
+    push    r14
+    push    r15
+
+    ; Guardar parámetros en registros no volátiles
+    mov     r14b, dil       ; r14b = type
+    mov     r15, rsi        ; r15  = hash original
+
+    ; 1) strdup(hash)
+    mov     rdi, r15
+    call    strdup
+    test    rax, rax
+    je      .CN_null        ; si falla, salir con NULL
+    mov     r15, rax        ; r15 = hash duplicado
+
+    ; 2) malloc(sizeof(node))
+    mov     edi, 32
     call    malloc
     test    rax, rax
-    je      .node_null
+    je      .CN_free_dup    ; si falla, liberar r15 y salir
 
-    mov     qword [rax+0],  0 ; node->next     = NULL
-    mov     qword [rax+8],  0 ; node->previous = NULL
-    mov     byte  [rax+16], dil ; node->type   = type
-    mov     qword [rax+24], rsi ; node->hash   = hash (sin duplicar)
+    ; 3) Inicializar campos
+    xor     rdx, rdx
+    mov     [rax+0],  rdx   ; next = NULL
+    mov     [rax+8],  rdx   ; prev = NULL
+    mov     byte [rax+16], r14b  ; type
+    mov     [rax+24], r15   ; hash ptr
 
-    ret
+    jmp     .CN_ok
 
-.node_null:
-    xor     rax, rax
+.CN_free_dup:
+    mov     rdi, r15
+    call    free           ; libero el strdup fallido
+
+.CN_null:
+    xor     rax, rax       ; return NULL
+
+.CN_ok:
+    ; RAX ya contiene el puntero al nodo válido
+
+    ; — Epílogue —
+    pop     r15
+    pop     r14
+    mov     rsp, rbp
+    pop     rbp
     ret
 
 string_proc_list_add_node_asm:
