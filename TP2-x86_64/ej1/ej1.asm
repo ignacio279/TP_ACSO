@@ -14,54 +14,36 @@ extern malloc
 extern free
 extern str_concat
 
-; ---------------------------------------------------------------
-; string_proc_list_create_asm:
-; Reserva 16 bytes para una lista (dos punteros) e inicializa ambos a 0.
-; ---------------------------------------------------------------
+
 string_proc_list_create_asm:
-    mov edi, 16           ; tamaño de string_proc_list
+    mov edi, 16           
     call malloc
     test rax, rax
     je .return_null
-    mov qword [rax], 0    ; list->first = NULL
-    mov qword [rax+8], 0  ; list->last  = NULL
+    mov qword [rax], 0   
+    mov qword [rax+8], 0  
     ret
 .return_null:
     xor rax, rax
     ret
 
-
-; ------------------------------------------
-; string_proc_node_create_asm
-; Entrada: dil = type, rsi = hash
-; Salida: rax = nuevo nodo o NULL
-; ------------------------------------------
+---------------------------------------------------------------
+; string_proc_node_create_asm:
+; Reserva 32 bytes para un nodo e inicializa sus campos:
+;   next = 0, previous = 0, type = valor, hash = puntero
+; ---------------------------------------------------------------
 string_proc_node_create_asm:
-    push    rbx
-    push    r12            
-
-    mov     bl, dil         ; BL = type (byte)
-    mov     r12, rsi        ; R12 = hash
-
-    mov     edi, 32         ; malloc(sizeof(node))
-    call    malloc
-    test    rax, rax
-    jz      .fail
-
-    ; inicializar nodo
-    mov     byte  [rax + 16], bl         ; type
-    mov     qword [rax + 24], r12        ; hash (puntero sin copiar string)
-    mov     qword [rax], 0               ; next
-    mov     qword [rax + 8], 0           ; previous
-
-    pop     r12
-    pop     rbx
+    mov edi, 32           ; tamaño de string_proc_node
+    call malloc
+    test rax, rax
+    je .node_null
+    mov qword [rax], 0       ; node->next     = NULL
+    mov qword [rax+8], 0     ; node->previous = NULL
+    mov byte  [rax+16], dil  ; node->type     = type (dil)
+    mov qword [rax+24], rsi  ; node->hash     = hash (rsi)
     ret
-
-.fail:
-    pop     r12
-    xor     rax, rax
-    pop     rbx
+.node_null:
+    xor rax, rax
     ret
 
 ; ------------------------------------------
