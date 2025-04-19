@@ -13,7 +13,6 @@ global string_proc_list_concat_asm
 extern malloc
 extern free
 extern str_concat
-extern strdup
 
 
 string_proc_list_create_asm:
@@ -83,76 +82,45 @@ string_proc_list_add_node_asm:
     ret
 
 
-; ---------------------------------------------------------------
-; string_proc_list_concat_asm:
-; Parámetros:
-;   RDI = list*, RSI = type, RDX = prefijo (char*)
-; Duplica el prefijo con strdup y luego concatena, con str_concat,
-; todos los hashes de los nodos cuyo campo type coincida.
-; ---------------------------------------------------------------
+; ------------------------------------------
+; string_proc_list_concat_asm
+; Entrada: rdi = lista, esi = type, rdx = string
+; Retorna: rax = string concatenada
+; ------------------------------------------
 string_proc_list_concat_asm:
-    push rbx
-    push r12
-    push r13
-    push r14
+    push    rbx
+    push    r12
+    mov     rbx, rdi            ; lista
+    mov     r12b, sil           ; type a buscar
+    mov     r13, rdx            ; string a concatenar
 
-    test rdi, rdi
-    je .return_concat_null_preserve
-    test rdx, rdx
-    je .return_concat_null_preserve
+    mov     rdi, empty_string
+    mov     rsi, r13
+    call    str_concat
+    mov     r14, rax            ; acumulador
 
-    mov r14, rdi        ; r14 = lista
-    mov r12, rsi        ; r12b = type buscado
+    mov     r15, [rbx]          ; head
 
-    ; strdup(prefijo)
-    mov rdi, rdx        ; parámetro: prefijo
-    call strdup
-    test rax, rax
-    je .return_concat_null_preserve
-    mov r10, rax        ; r10 = result acumulado
+.loop:
+    test    r15, r15
+    jz      .done
+    movzx   eax, byte [r15 + 16]
+    cmp     al, r12b
+    jne     .skip
+    ; concat
+    mov     rdi, r14
+    mov     rsi, [r15 + 24]
+    call    str_concat
+    mov     rdx, r14
+    mov     r14, rax
+    mov     rdi, rdx
+    call    free
+.skip:
+    mov     r15, [r15]
+    jmp     .loop
 
-    mov r13, qword [r14] ; r13 = lista->first
-
-.concat_loop:
-    test r13, r13
-    je .end_concat_loop
-
-    mov al, byte [r13+16] ; al = current_node->type
-    cmp al, r12b
-    jne .skip_concat
-
-    ; str_concat(result, current_node->hash)
-    mov rdi, r10               ; primer parámetro: result
-    mov rsi, qword [r13+24]    ; segundo parámetro: hash
-    call str_concat
-    test rax, rax
-    je .concat_fail
-
-    ; liberar el antiguo result y actualizar r10
-    mov rbx, rax
-    mov rdi, r10
-    call free
-    mov r10, rbx
-
-.skip_concat:
-    mov r13, qword [r13] ; avanzar current_node = current_node->next
-    jmp .concat_loop
-
-.end_concat_loop:
-    mov rax, r10         ; devolver result
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
-    ret
-
-.concat_fail:
-    mov rdi, r10
-    call free
-.return_concat_null_preserve:
-    xor rax, rax         ; retornar NULL
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
+.done:
+    mov     rax, r14
+    pop     r12
+    pop     rbx
     ret
