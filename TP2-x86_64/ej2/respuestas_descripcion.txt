@@ -13,19 +13,9 @@ En esta fase, el programa toma dos números enteros como entrada, primero, el pr
 
 PHASE_3
 
-En la fase 3, el programa espera como entrada dos valores: un string y un número. Tras parsear la entrada, se llama a la función readlines, que carga una lista de strings desde un archivo externo. Luego, la función cuenta procesa estos valores aplicando una lógica de búsqueda recursiva que recuerda a una búsqueda binaria. El objetivo es que dicha función devuelva exactamente el valor 0x270f (9999 en decimal), y además, que ese número coincida con el valor ingresado como segundo parámetro. Si se cumple esta condición, el programa continúa y libera correctamente la memoria utilizada.
-
+En la fase 3, el programa espera como entrada dos valores: un string y un número. Tras parsear la entrada, se llama a la función readlines, que carga una lista de strings desde un archivo externo. Luego invoca cuenta(array, pattern, 0, n‑1), que recorre recursivamente esas n cadenas contando cuántas veces aparece el patrón. Finalmente compara ese recuento con el entero n que introdujimos; si coinciden exactamente (y n está dentro del límite permitido), libera la memoria y la fase se desactiva, en caso contrario la bomba explota.
 La solución para esta fase consiste en ingresar como string "aboquillar" y como número 10692. Este input logra que cuenta devuelva 9999 y que dicho número coincida con el valor ingresado, por lo que la bomba no explota.
-
 Sin embargo, esta fase tiene una particularidad importante: si se ingresan tres valores, y el tercer string es exactamente "abrete_sesamo", el programa detecta esta condición y activa una fase secreta. Esta funcionalidad está oculta dentro de la función phase_defused, la cual verifica si el contador de inputs leídos es 3 y el tercer string coincide con la palabra clave. De este modo, el input "aboquillar 10692 abrete_sesamo" permite acceder a la secret_phase, la cual solo puede ser activada desde esta fase
-
-Para desactivar esta fase, se necesita un input de al menos dos palabras, donde la primera sea una cadena y la segunda un número entero. 
-La fase reserva memoria para la cadena, y luego con sscanf extrae ambos valores.
-Después, llama a readlines con ese número, que devuelve un array de strings. 
-Luego usa la función cuenta para contar cuántas veces aparece la palabra en ese array (hasta la posición n-1). 
-El resultado de cuenta debe ser igual al número ingresado, y además no puede superar cierto rango (para evitar overflow). 
-El input "aboquillar 685 abrete_sesamo" desactiva correctamente la bomba porque la palabra "aboquillar" aparece exactamente 685 veces en el array retornado por readlines, cumpliendo con todas las condiciones.
-
 
 PHASE_4 
 
@@ -38,6 +28,7 @@ Después de procesar los seis caracteres, se verifica si la suma acumulada es ig
 La cadena que cumple con esta condición es `013679`. Cada uno de estos caracteres tiene un valor ASCII cuyo residuo módulo 16 corresponde a índices específicos del arreglo. La suma de los valores en esas posiciones da como resultado 62, cumpliendo con el requerimiento del programa. Por eso, esta es la solución correcta para desactivar la fase 4 sin explotar la bomba.
 
 SECRET_PHASE 
+
 Esta fase no se activa automáticamente. Como se mencionó, la activé manualmente durante la phase_3 con un input especial que incluía la palabra clave "abrete_sesamo".
 Una vez activada, el programa pide un número, lo convierte con strtoq, y luego lo pasa como argumento a la función recursiva fun7, que recorre un árbol binario comenzando desde la dirección de memoria 0x4f91f0 (etiquetada como n1).
 El objetivo ahora es que fun7 devuelva 6 (cmp eax, 0x6). Como el recorrido en fun7 representa un camino codificado en binario donde ir a la izquierda es *2 y a la derecha es *2 + 1, me propuse encontrar el nodo tal que el camino recorrido hasta él devuelva 6.
