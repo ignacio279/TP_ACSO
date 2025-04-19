@@ -27,24 +27,31 @@ string_proc_list_create_asm:
     xor rax, rax
     ret
 
-
-; ---------------------------------------------------------------
-; string_proc_node_create_asm:
-; Reserva 32 bytes para un nodo e inicializa sus campos:
-;   next = 0, previous = 0, type = valor, hash = puntero
-; ---------------------------------------------------------------
 string_proc_node_create_asm:
-    mov edi, 32           ; tamaño de string_proc_node
-    call malloc
-    test rax, rax
-    je .node_null
-    mov qword [rax], 0       ; node->next     = NULL
-    mov qword [rax+8], 0     ; node->previous = NULL
-    mov byte  [rax+16], dil  ; node->type     = type (dil)
-    mov qword [rax+24], rsi  ; node->hash     = hash (rsi)
+    push    rbx
+    push    r12            
+
+    mov     bl, dil        
+    mov     r12, rsi        
+
+    mov     edi, 32         
+    call    malloc
+    test    rax, rax
+    jz      .fail
+
+    mov     byte  [rax + 16], bl         
+    mov     qword [rax + 24], r12        
+    mov     qword [rax], 0              
+    mov     qword [rax + 8], 0           
+
+    pop     r12
+    pop     rbx
     ret
-.node_null:
-    xor rax, rax
+
+.fail:
+    pop     r12
+    xor     rax, rax
+    pop     rbx
     ret
 
 ; ------------------------------------------
@@ -77,6 +84,7 @@ string_proc_list_add_node_asm:
 .fin:
     pop     rbx
     ret
+
 
 ; ------------------------------------------
 ; string_proc_list_concat_asm
