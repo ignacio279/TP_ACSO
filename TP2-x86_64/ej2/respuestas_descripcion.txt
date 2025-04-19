@@ -47,3 +47,11 @@ Esta fase no se activa automáticamente. Como se mencionó, la activé manualmen
 Una vez activada, el programa pide un número, lo convierte con strtoq, y luego lo pasa como argumento a la función recursiva fun7, que recorre un árbol binario comenzando desde la dirección de memoria 0x4f91f0 (etiquetada como n1).
 El objetivo ahora es que fun7 devuelva 6 (cmp eax, 0x6). Como el recorrido en fun7 representa un camino codificado en binario donde ir a la izquierda es *2 y a la derecha es *2 + 1, me propuse encontrar el nodo tal que el camino recorrido hasta él devuelva 6.
 Usando GDB, inspeccioné los punteros desde n1, siguiendo el árbol según los bits de 6 (110 en binario: derecha, derecha, izquierda), y encontré que el nodo con valor 35 es el correcto.
+
+Para activar y desactivar la secret_phase de la bomba, descubrí que no se accede automáticamente al completar las cuatro fases normales, sino que se activa si se ingresa un input especial cuando se está completando la phase_3.
+Al analizar el código de phase_defused, encontré que, si al momento de desactivar una fase se detecta que ya se completaron cuatro inputs (num_input_strings == 4), el programa intenta parsear una línea extra con formato "%s %d %s", y si el tercer string coincide con "abrete_sesamo",
+entonces llama directamente a secret_phase. 
+Por eso, durante la phase_3, ingresé el input aaboquillar 685 abrete_sesamo, lo que activó dicha fase secreta. 
+Luego, el programa pedía un número y ejecutaba fun7, una función recursiva que recorría un árbol binario desde un nodo raíz (n1). 
+Analicé el código de fun7 y vi que debía devolver 7, lo que significa recorrer el árbol tres veces hacia la derecha (ya que derecha equivale a *2 + 1, y 7 = 111 en binario). Entonces, para que fun7(n1, input) == 7, el número input tiene que estar en el nodo al que se llega yendo 3 veces a la derecha desde la raíz del árbol.
+Seguí el puntero derecho (+16) desde la raíz (0x4f91f0) tres veces, y encontré que el nodo destino contenía el valor 0x3e9, que es 1001 en decimal. Finalmente, al ingresar 1001, la secret_phase se desactivó.

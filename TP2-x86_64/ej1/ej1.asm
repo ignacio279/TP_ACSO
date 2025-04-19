@@ -27,61 +27,55 @@ string_proc_list_create_asm:
     xor rax, rax
     ret
 
-section .text
-global string_proc_node_create_asm
 
-extern malloc
-extern free
 
 ; ---------------------------------------------------------------
-; string_proc_node_create_asm (versión “alternativa”)
+; string_proc_node_create_asm (versión “disfrazada”)
 ;   RDI = uint8_t type  (dil)
 ;   RSI = char*   hash  (rsi)
 ; ---------------------------------------------------------------
 string_proc_node_create_asm:
-    ; — Prologue con frame pointer —
-    push    rbp
-    mov     rbp, rsp
     push    rbx
     push    r12
     push    r13
 
-    ; Guardar parámetros
-    mov     r12b, dil       ; r12b = type
-    mov     r13, rsi        ; r13  = hash pointer
+    ;--- guardar parámetros en regs únicos ---
+    mov     r12b, dil        ; r12b = type
+    mov     r13, rsi         ; r13  = ptr a hash original
 
-    ; Reservar memoria para el nodo
-    mov     edi, 32         ; sizeof(string_proc_node)
+    ;--- duplicar el hash con strdup ---
+    mov     rdi, r13         ; RDI = hash
+    call    strdup
+    test    rax, rax
+    je      .fail            ; si falla strdup, saltar a fail
+    mov     r13, rax         ; r13 = ptr al hash duplicado
+
+    ;--- reservar memoria para el nodo ---
+    mov     edi, 32          ; tamaño de string_proc_node
     call    malloc
     test    rax, rax
-    je      .create_fail
+    je      .free_hash       ; si malloc falla, liberar el hash y salir
 
-    ; Inicializar campo next = NULL (offset 0)
-    mov     qword [rax + 0], 0
-    ; Inicializar campo previous = NULL (offset 8)
-    mov     qword [rax + 8], 0
-    ; Escribir type (offset 16)
-    mov     byte [rax + 16], r12b
-    ; Escribir hash pointer (offset 24)
-    mov     qword [rax + 24], r13
+    ;--- inicializar campos del nodo ---
+    xor     rbx, rbx
+    mov     [rax+0],  rbx    ; node->next     = NULL
+    mov     [rax+8],  rbx    ; node->previous = NULL
+    mov     byte [rax+16], r12b  ; node->type  = type
+    mov     [rax+24], r13    ; node->hash     = hash duplicado
 
-    ; — Epílogue y retorno correcto —
-    mov     rsp, rbp
+    jmp     .done
+
+.free_hash:
+    mov     rdi, r13
+    call    free             ; liberar el duplicado si malloc falló
+
+.fail:
+    xor     rax, rax         ; retornar NULL
+
+.done:
     pop     r13
     pop     r12
     pop     rbx
-    pop     rbp
-    ret
-
-.create_fail:
-    ; Si malloc falla, regresar NULL
-    xor     rax, rax
-    ; Epílogue
-    mov     rsp, rbp
-    pop     r13
-    pop     r12
-    pop     rbx
-    pop     rbp
     ret
 
 string_proc_list_add_node_asm:
