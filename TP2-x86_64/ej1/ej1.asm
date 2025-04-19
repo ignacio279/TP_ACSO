@@ -81,25 +81,19 @@ string_proc_list_add_node_asm:
     pop     rbx
     ret
 
-
-; ------------------------------------------
-; string_proc_list_concat_asm
-; Entrada: rdi = lista, esi = type, rdx = string
-; Retorna: rax = string concatenada
-; ------------------------------------------
 string_proc_list_concat_asm:
     push    rbx
     push    r12
-    mov     rbx, rdi            ; lista
-    mov     r12b, sil           ; type a buscar
-    mov     r13, rdx            ; string a concatenar
+    mov     rbx, rdi            
+    mov     r12b, sil           
+    mov     r13, rdx           
 
     mov     rdi, empty_string
     mov     rsi, r13
     call    str_concat
-    mov     r14, rax            ; acumulador
+    mov     r14, rax            
 
-    mov     r15, [rbx]          ; head
+    mov     r15, [rbx]          
 
 .loop:
     test    r15, r15
