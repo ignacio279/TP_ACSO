@@ -88,7 +88,6 @@ string_proc_list_add_node_asm:
 ;   RDX = char*              (prefijo)
 ; ---------------------------------------------------------------
 string_proc_list_concat_asm:
-    ; — Prologue completo —
     push    rbp
     mov     rbp, rsp
     push    rbx
@@ -101,9 +100,9 @@ string_proc_list_concat_asm:
     test    rdi, rdi
     je      .ret_null
 
-    mov     rbx, rdi       ; rbx = lista
-    mov     r12b, sil      ; r12b = type
-    mov     r13, rdx       ; r13 = prefijo
+    mov     rbx, rdi      
+    mov     r12b, sil      
+    mov     r13, rdx     
 
     ; result = str_concat("", prefijo)
     lea     rdi, [rel empty_string]
@@ -111,21 +110,19 @@ string_proc_list_concat_asm:
     call    str_concat
     test    rax, rax
     je      .ret_null
-    mov     r14, rax       ; r14 = result acumulado
+    mov     r14, rax       
 
     ; puntero al primer nodo
-    mov     r15, [rbx]     ; r15 = lista->first
+    mov     r15, [rbx]     
 
 .loop_nodes:
     test    r15, r15
     jz      .done
 
-    ; compara r15->type con r12b
     movzx   eax, byte [r15+16]
     cmp     al, r12b
     jne     .next_node
 
-    ; tmp = str_concat(result, r15->hash)
     mov     rdi, r14
     mov     rsi, [r15+24]
     call    str_concat
@@ -134,20 +131,20 @@ string_proc_list_concat_asm:
 
     ; libera el antiguo result
     mov     rdx, r14
-    mov     r14, rax       ; r14 = nuevo result
+    mov     r14, rax       
     mov     rdi, rdx
     call    free
 
 .next_node:
-    mov     r15, [r15]     ; avanzar al siguiente nodo
+    mov     r15, [r15]     
     jmp     .loop_nodes
 
 .done:
-    mov     rax, r14       ; devolver result
+    mov     rax, r14      
     jmp     .epilogue
 
 .ret_null:
-    xor     rax, rax       ; devuelve NULL
+    xor     rax, rax     
 
 .epilogue:
     pop     r15
