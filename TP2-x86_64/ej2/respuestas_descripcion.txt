@@ -27,6 +27,20 @@ Después de procesar los seis caracteres, se verifica si la suma acumulada es ig
 
 La cadena que cumple con esta condición es `013679`. Cada uno de estos caracteres tiene un valor ASCII cuyo residuo módulo 16 corresponde a índices específicos del arreglo. La suma de los valores en esas posiciones da como resultado 62, cumpliendo con el requerimiento del programa. Por eso, esta es la solución correcta para desactivar la fase 4 sin explotar la bomba.
 
+
+
+
+Para encontrar el input correcto para la fase 4, primero analicé el código ensamblador y entendí que la función esperaba dos enteros ingresados por el usuario, que serían almacenados en la pila mediante sscanf. 
+Luego, el primer número se enmascara con & 0xF (limitándolo al rango de 0 a 15) y se utiliza como índice para acceder a un array de enteros.
+A partir de ese índice inicial, el programa recorre el array siguiendo los valores como nuevos índices: en cada paso, toma el valor actual como el siguiente índice, suma ese valor a un acumulador y repite el proceso hasta llegar al valor 15.
+Se requiere que este recorrido dure exactamente 7 pasos y que la suma total de los valores leídos coincida con el segundo número ingresado. 
+Para resolverlo, primero localicé la dirección real del array a través del cálculo de rip + 0xcbcf0 y verifiqué el contenido del array en memoria usando GDB. 
+Luego, inspeccioné manualmente los valores del array para encontrar un camino de 7 pasos que termine en 15. 
+Encontré que comenzando con el índice 8 (es decir, ingresando como primer número cualquier valor que cumpla n & 0xF = 8), el recorrido seguía los valores: 0 → 7 → 9 → 12 → 2 → 6 → 15, cumpliendo exactamente con los 7 pasos requeridos. 
+Finalmente, sumando los valores leídos (0 + 7 + 9 + 12 + 2 + 6 + 15) obtuve 51, que debía ser el segundo número del input. 
+Así, el input correcto resultó ser 8 51, que cumple todas las condiciones del programa y desactiva la bomba.
+
+
 SECRET_PHASE 
 
 Esta fase no se activa automáticamente. Como se mencionó, la activé manualmente durante la phase_3 con un input especial que incluía la palabra clave "abrete_sesamo".

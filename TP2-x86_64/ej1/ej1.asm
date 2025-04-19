@@ -27,31 +27,61 @@ string_proc_list_create_asm:
     xor rax, rax
     ret
 
+section .text
+global string_proc_node_create_asm
+
+extern malloc
+extern free
+
+; ---------------------------------------------------------------
+; string_proc_node_create_asm (versión “alternativa”)
+;   RDI = uint8_t type  (dil)
+;   RSI = char*   hash  (rsi)
+; ---------------------------------------------------------------
 string_proc_node_create_asm:
+    ; — Prologue con frame pointer —
+    push    rbp
+    mov     rbp, rsp
     push    rbx
-    push    r12            
+    push    r12
+    push    r13
 
-    mov     bl, dil        
-    mov     r12, rsi        
+    ; Guardar parámetros
+    mov     r12b, dil       ; r12b = type
+    mov     r13, rsi        ; r13  = hash pointer
 
-    mov     edi, 32         
+    ; Reservar memoria para el nodo
+    mov     edi, 32         ; sizeof(string_proc_node)
     call    malloc
     test    rax, rax
-    jz      .fail
+    je      .create_fail
 
-    mov     byte  [rax + 16], bl         
-    mov     qword [rax + 24], r12        
-    mov     qword [rax], 0              
-    mov     qword [rax + 8], 0           
+    ; Inicializar campo next = NULL (offset 0)
+    mov     qword [rax + 0], 0
+    ; Inicializar campo previous = NULL (offset 8)
+    mov     qword [rax + 8], 0
+    ; Escribir type (offset 16)
+    mov     byte [rax + 16], r12b
+    ; Escribir hash pointer (offset 24)
+    mov     qword [rax + 24], r13
 
+    ; — Epílogue y retorno correcto —
+    mov     rsp, rbp
+    pop     r13
     pop     r12
     pop     rbx
+    pop     rbp
     ret
 
-.fail:
-    pop     r12
+.create_fail:
+    ; Si malloc falla, regresar NULL
     xor     rax, rax
+    ; Epílogue
+    mov     rsp, rbp
+    pop     r13
+    pop     r12
     pop     rbx
+    pop     rbp
     ret
 
 string_proc_list_add_node_asm:
@@ -81,12 +111,6 @@ string_proc_list_add_node_asm:
     pop     rbx
     ret
 
-; ---------------------------------------------------------------
-; string_proc_list_concat_asm:
-;   RDI = string_proc_list*  (lista)
-;   RSI = uint8_t            (type)
-;   RDX = char*              (prefijo)
-; ---------------------------------------------------------------
 string_proc_list_concat_asm:
     push    rbp
     mov     rbp, rsp
