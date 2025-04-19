@@ -22,16 +22,22 @@ extern strdup
 ; string_proc_list_create_asm:
 ; Reserva 16 bytes para una lista (dos punteros) e inicializa ambos a 0.
 ; ---------------------------------------------------------------
+
 string_proc_list_create_asm:
-    mov edi, 16         ; sizeof(string_proc_list) = 16 bytes
-    call malloc      
-    test rax, rax       
-    je .return_null     
-    mov qword [rax], 0  ; list->first = NULL
-    mov qword [rax+8], 0 ; list->last = NULL
-    ret
+    ; Reservar memoria para la lista (tamaño de string_proc_list)
+    mov edi, 16                 ; Tamaño de string_proc_list (2 punteros)
+    call malloc
+    test rax, rax              ; Comprobar si malloc devolvió NULL
+    je .return_null             ; Si es NULL, saltar a .return_null
+
+    ; Inicializar la lista
+    mov qword [rax], 0          ; list->first = NULL
+    mov qword [rax+8], 0        ; list->last = NULL
+
+    ret                         ; Retornar la dirección de la lista
+
 .return_null:
-    xor rax, rax       
+    xor rax, rax               ; Retornar NULL (0)
     ret
 
 ; ---------------------------------------------------------------
@@ -42,42 +48,24 @@ string_proc_list_create_asm:
 ;   type = valor (offset 16, 1 byte)
 ;   hash = puntero (offset 24)
 ; ---------------------------------------------------------------
-; ---------------------------------------------------------------
-; string_proc_node_create_asm:
-; Reserva 32 bytes para un nodo y asigna:
-;   next = 0 (offset 0)
-;   previous = 0 (offset 8)
-;   type = valor (offset 16, 1 byte)
-;   hash = puntero (offset 24)
-; ---------------------------------------------------------------
+
 string_proc_node_create_asm:
-    ;––– Guardamos type y hash en la pila –––
-    push  rdi        ; rdi = type
-    push  rsi        ; rsi = hash pointer
+    ; Reservar memoria para el nodo (tamaño de string_proc_node)
+    mov edi, 32                 ; Tamaño de string_proc_node (4 punteros + 1 byte)
+    call malloc
+    test rax, rax              ; Comprobar si malloc devolvió NULL
+    je .return_null             ; Si es NULL, saltar a .return_null
 
-    ;––– Llamamos a malloc(32) –––
-    mov   edi, 32    ; tamaño del nodo
-    call  malloc
-    test  rax, rax
-    je    .node_null
+    ; Inicializar el nodo
+    mov byte [rax+16], dil      ; node->type = type (en dil)
+    mov qword [rax+24], rsi     ; node->hash = hash (en rsi)
+    mov qword [rax], 0          ; node->next = NULL
+    mov qword [rax+8], 0        ; node->previous = NULL
 
-    ;––– Recuperamos type y hash –––
-    pop   rsi        ; rsi = hash
-    pop   rdi        ; rdi = type
+    ret                         ; Retornar la dirección del nodo
 
-    ;––– Inicializamos campos del nodo –––
-    mov   qword [rax  ], 0       ; next = NULL
-    mov   qword [rax+ 8], 0      ; previous = NULL
-    mov   byte  [rax+16], dil    ; type = (uint8_t)rdi
-    mov   qword [rax+24], rsi    ; hash = pointer
-
-    ret
-
-.node_null:
-    ;––– malloc falló: sacamos los parámetros y retornamos NULL –––
-    pop   rsi
-    pop   rdi
-    xor   rax, rax
+.return_null:
+    xor rax, rax               ; Retornar NULL (0)
     ret
 ; ---------------------------------------------------------------
 ; string_proc_list_add_node_asm:
@@ -90,39 +78,38 @@ string_proc_node_create_asm:
 ; Si ya tiene nodos, lo enlaza al final.
 ; ---------------------------------------------------------------
 string_proc_list_add_node_asm:
-    test rdi, rdi
-    je .return_add_node      
+    ; Verificar si la lista es NULL
+    test rdi, rdi            ; Comprobar si list es NULL
+    je  .return              ; Si es NULL, retornar
 
-    mov r8, rdi              ; r8 = pointer a list
-
-    ; Preparar parámetros para crear el nodo:
-    ; Pasar RSI = type, RDX = hash. Llamamos a string_proc_node_create_asm.
-    mov rdi, rsi            ; rdi = type
-    mov rsi, rdx            ; rsi = hash
+    ; Llamar a string_proc_node_create_asm para crear un nuevo nodo
+    mov rsi, dl              ; type en rsi
+    mov rdx, r8              ; hash en rdx
     call string_proc_node_create_asm
-    test rax, rax            
-    je .return_add_node
-    mov r9, rax             ; r9 = new node
+    test rax, rax            ; Comprobar si node es NULL
+    je  .return              ; Si node es NULL, retornar
 
-    ; Revisar si la lista no está vacía: list->last se encuentra en [r8+8].
-    mov rax, qword [r8+8]    
-    test rax, rax
-    je .empty_list           
+    ; Guardamos el puntero al nuevo nodo en r9
+    mov r9, rax
 
-    ; Si la lista no está vacía:
-    mov qword [r9+8], rax   ; new_node->previous = list->last
-    mov qword [rax], r9     ; list->last->next = new_node
-    mov qword [r8+8], r9    ; list->last = new_node
-    jmp .return_add_node_done
+    ; Verificar si list->last es NULL (es decir, si la lista está vacía)
+    mov rax, qword [rdi+8]   ; Cargar list->last en rax
+    test rax, rax            ; Comprobar si list->last es NULL
+    je  .empty_list          ; Si es NULL, ir a .empty_list
+
+    ; Si la lista no está vacía, enlazar el nuevo nodo al final
+    mov qword [r9+8], rax    ; new_node->previous = list->last
+    mov qword [rax], r9      ; list->last->next = new_node
+    mov qword [rdi+8], r9    ; list->last = new_node
+    jmp .return              ; Finalizar
 
 .empty_list:
-    mov qword [r8], r9      ; list->first = new_node
-    mov qword [r8+8], r9    ; list->last = new_node
+    ; Si la lista está vacía, asignar el primer y último nodo a new_node
+    mov qword [rdi], r9      ; list->first = new_node
+    mov qword [rdi+8], r9    ; list->last = new_node
 
-.return_add_node_done:
-.return_add_node:
+.return:
     ret
-
 ; ---------------------------------------------------------------
 ; string_proc_list_concat_asm:
 ; Parámetros:
@@ -144,76 +131,53 @@ string_proc_list_add_node_asm:
 ;   RDI = lista, RSI = type, RDX = prefijo (hash inicial)
 ; ---------------------------------------------------------------
 string_proc_list_concat_asm:
-    ;––– Guardar los callee‑saved que vamos a usar –––
-    push  rbx
-    push  r12
-    push  r13
-    push  r14
-    push  r15
+    ; Verificar si list o hash son NULL
+    test rdi, rdi            ; Comprobar si list es NULL
+    je  .return_null         ; Si es NULL, retornar NULL
+    test rdx, rdx            ; Comprobar si hash es NULL
+    je  .return_null         ; Si es NULL, retornar NULL
 
-    ; Verificar nulls
-    test  rdi, rdi
-    je    .return_concat_null_preserve
-    test  rdx, rdx
-    je    .return_concat_null_preserve
+    ; Llamar a strdup(hash) para crear una copia de hash
+    mov rdi, rdx             ; primer parámetro: hash
+    call strdup
+    test rax, rax            ; Comprobar si strdup falló
+    je  .return_null         ; Si strdup falló, retornar NULL
+    mov r10, rax             ; r10 = result
 
-    ; Preparar iteración
-    mov   r14, rdi         ; r14 = lista
-    mov   r12, rsi         ; r12 = type
+    ; Iterar por los nodos de la lista
+    mov r13, qword [rdi]     ; r13 = list->first
+.loop_start:
+    test r13, r13            ; Comprobar si current_node es NULL
+    je  .end_loop            ; Si es NULL, terminamos
 
-    ; Prefijo: strdup(hash)
-    mov   rdi, rdx         ; primer parámetro: prefijo
-    call  strdup
-    test  rax, rax
-    je    .return_concat_null_preserve
-    mov   r15, rax         ; r15 = result (registro callee‑saved)
+    mov al, byte [r13+16]    ; r13->type
+    cmp al, sil              ; Comparar type de nodo con type (en sil)
+    jne .skip_concat         ; Si no son iguales, saltamos
 
-    ; Iterar por la lista
-    mov   r13, qword [r14] ; r13 = primer nodo
-.concat_loop:
-    test  r13, r13
-    je    .end_concat_loop
+    ; Concatenar result con current_node->hash
+    mov rdi, r10             ; primer parámetro: result
+    mov rsi, qword [r13+24]  ; segundo parámetro: current_node->hash
+    call str_concat
+    test rax, rax            ; Comprobar si str_concat falló
+    je  .concat_fail         ; Si falla, liberar result y retornar NULL
 
-    mov   al, byte [r13+16] ; current_node->type
-    cmp   al, r12b
-    jne   .skip_concat
-
-    ; str_concat(result, current_node->hash)
-    mov   rdi, r15
-    mov   rsi, qword [r13+24]
-    call  str_concat
-    test  rax, rax
-    je    .concat_fail
-
-    ; free(old_result) y actualizar
-    mov   rbx, rax         ; rbx = nuevo result
-    mov   rdi, r15
-    call  free
-    mov   r15, rbx         ; r15 = result actualizado
+    free r10                 ; Liberar el viejo result
+    mov r10, rax             ; Actualizar result con el nuevo puntero
 
 .skip_concat:
-    mov   r13, qword [r13] ; next node
-    jmp   .concat_loop
+    mov r13, qword [r13]     ; Avanzar al siguiente nodo
+    jmp .loop_start          ; Continuar con el siguiente nodo
 
-.end_concat_loop:
-    mov   rax, r15         ; devolver result
+.end_loop:
+    mov rax, r10             ; Devolver result
 
-    ;––– Restaurar callee‑saved –––
-    pop   r15
-    pop   r14
-    pop   r13
-    pop   r12
-    pop   rbx
     ret
 
 .concat_fail:
-    mov   rdi, r15
-    call  free             ; liberar prefijo o acumulado parcial
-.return_concat_null_preserve:
-    xor   rax, rax
-    pop   r15
-    pop   r14
-    pop   r13
-    pop   r12
-    pop   rbx
+    free r10                 ; Liberar result si str_concat falló
+    xor rax, rax             ; Retornar NULL (0)
+    ret
+
+.return_null:
+    xor rax, rax             ; Retornar NULL (0)
     ret
