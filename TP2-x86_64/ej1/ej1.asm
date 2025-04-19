@@ -1,12 +1,4 @@
-;/** defines bool y puntero **/
-%define NULL 0
-%define TRUE 1
-%define FALSE 0
-
-section .data
-
 section .text
-
 global string_proc_list_create_asm
 global string_proc_node_create_asm
 global string_proc_list_add_node_asm
@@ -22,7 +14,6 @@ extern strdup
 ; string_proc_list_create_asm:
 ; Reserva 16 bytes para una lista (dos punteros) e inicializa ambos a 0.
 ; ---------------------------------------------------------------
-
 string_proc_list_create_asm:
     ; Reservar memoria para la lista (tamaño de string_proc_list)
     mov edi, 16                 ; Tamaño de string_proc_list (2 punteros)
@@ -48,7 +39,6 @@ string_proc_list_create_asm:
 ;   type = valor (offset 16, 1 byte)
 ;   hash = puntero (offset 24)
 ; ---------------------------------------------------------------
-
 string_proc_node_create_asm:
     ; Reservar memoria para el nodo (tamaño de string_proc_node)
     mov edi, 32                 ; Tamaño de string_proc_node (4 punteros + 1 byte)
@@ -67,6 +57,7 @@ string_proc_node_create_asm:
 .return_null:
     xor rax, rax               ; Retornar NULL (0)
     ret
+
 ; ---------------------------------------------------------------
 ; string_proc_list_add_node_asm:
 ; Parámetros:
@@ -110,6 +101,7 @@ string_proc_list_add_node_asm:
 
 .return:
     ret
+
 ; ---------------------------------------------------------------
 ; string_proc_list_concat_asm:
 ; Parámetros:
@@ -125,10 +117,6 @@ string_proc_list_add_node_asm:
 ;     llama a str_concat(result, node->hash), libera el viejo result y actualiza r10.
 ;   - Al finalizar, retorna el puntero en RAX.
 ; Se preservan los registros no volátiles: RBX, R12, R13 y se copia list pointer en R14.
-; ---------------------------------------------------------------
-; ---------------------------------------------------------------
-; string_proc_list_concat_asm:
-;   RDI = lista, RSI = type, RDX = prefijo (hash inicial)
 ; ---------------------------------------------------------------
 string_proc_list_concat_asm:
     ; Verificar si list o hash son NULL
@@ -161,7 +149,7 @@ string_proc_list_concat_asm:
     test rax, rax            ; Comprobar si str_concat falló
     je  .concat_fail         ; Si falla, liberar result y retornar NULL
 
-    free r10                 ; Liberar el viejo result
+    free_node r10            ; Liberar el viejo result
     mov r10, rax             ; Actualizar result con el nuevo puntero
 
 .skip_concat:
@@ -174,7 +162,7 @@ string_proc_list_concat_asm:
     ret
 
 .concat_fail:
-    free r10                 ; Liberar result si str_concat falló
+    free_node r10            ; Liberar result si str_concat falló
     xor rax, rax             ; Retornar NULL (0)
     ret
 
