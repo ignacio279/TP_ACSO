@@ -54,19 +54,15 @@ string_proc_node_create_asm:
     pop     rbx
     ret
 
-; ------------------------------------------
-; string_proc_list_add_node_asm
-; Entrada: rdi = lista, esi = type, rdx = hash
-; ------------------------------------------
 string_proc_list_add_node_asm:
     push    rbx
-    mov     rbx, rdi            ; lista
+    mov     rbx, rdi           
     mov     dil, sil
     mov     rsi, rdx
     call    string_proc_node_create_asm
     test    rax, rax
     jz      .fin
-    mov     rcx, [rbx]          ; head
+    mov     rcx, [rbx]          
     test    rcx, rcx
     jnz     .not_empty
 
@@ -76,10 +72,10 @@ string_proc_list_add_node_asm:
     jmp     .fin
 
 .not_empty:
-    mov     rdx, [rbx + 8]      ; tail
-    mov     [rdx], rax          ; tail->next = nodo
-    mov     [rax + 8], rdx      ; nodo->prev = tail
-    mov     [rbx + 8], rax      ; tail = nodo
+    mov     rdx, [rbx + 8]      
+    mov     [rdx], rax          
+    mov     [rax + 8], rdx      
+    mov     [rbx + 8], rax      
 
 .fin:
     pop     rbx
