@@ -149,7 +149,9 @@ string_proc_list_concat_asm:
     test rax, rax            ; Comprobar si str_concat falló
     je  .concat_fail         ; Si falla, liberar result y retornar NULL
 
-    call free               ; Liberar el viejo result
+    ; Liberar el viejo result y actualizar
+    mov rdi, r10
+    call free                ; Llamar a free para liberar el viejo result
     mov r10, rax             ; Actualizar result con el nuevo puntero
 
 .skip_concat:
@@ -162,7 +164,8 @@ string_proc_list_concat_asm:
     ret
 
 .concat_fail:
-    call free               ; Liberar result si str_concat falló
+    mov rdi, r10
+    call free                ; Llamar a free para liberar el viejo result si hubo error
     xor rax, rax             ; Retornar NULL (0)
     ret
 
