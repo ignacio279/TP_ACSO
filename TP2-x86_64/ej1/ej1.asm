@@ -117,85 +117,39 @@ string_proc_list_add_node_asm:
 ; Se preservan los registros no volátiles: RBX, R12, R13 y se copia list pointer en R14.
 ; ---------------------------------------------------------------
 string_proc_list_concat_asm:
-    push rbx
-    push r12
-    push r13
-    push r14
+    push    rbx
+    push    r12
+    mov     rbx, rdi            ; lista
+    mov     r12b, sil           ; type a buscar
+    mov     r13, rdx            ; string a concatenar
 
-    ; Verificar que list y hash no sean NULL
-    test rdi, rdi
-    je .return_concat_null_preserve
-    test rdx, rdx
-    je .return_concat_null_preserve
+    mov     rdi, empty_string
+    mov     rsi, r13
+    call    str_concat
+    mov     r14, rax            ; acumulador
 
-    ; Validar que el string hash esté bien formado y tenga \0
-    mov rax, rdx        ; rax = hash
-    mov rcx, 0          ; contador de caracteres
+    mov     r15, [rbx]          ; head
 
-.validar_hash:
-    cmp byte [rax], 0
-    je .hash_ok
-    inc rax
-    inc rcx
-    cmp rcx, 512        ; limite razonable
-    ja .return_concat_null_preserve
-    jmp .validar_hash
+.loop:
+    test    r15, r15
+    jz      .done
+    movzx   eax, byte [r15 + 16]
+    cmp     al, r12b
+    jne     .skip
+    ; concat
+    mov     rdi, r14
+    mov     rsi, [r15 + 24]
+    call    str_concat
+    mov     rdx, r14
+    mov     r14, rax
+    mov     rdi, rdx
+    call    free
+.skip:
+    mov     r15, [r15]
+    jmp     .loop
 
-.hash_ok:
-    ; Guardar registros útiles
-    mov r14, rdi        ; lista
-    mov r12, rsi        ; tipo
-
-    ; Llamar a strdup(hash)
-    mov rdi, rdx
-    call strdup
-    test rax, rax
-    je .return_concat_null_preserve
-    mov r10, rax        ; r10 = resultado acumulado
-
-    mov r13, qword [r14] ; r13 = list->first
-
-.concat_loop:
-    test r13, r13
-    je .end_concat_loop
-
-    ; comparar tipo
-    mov al, byte [r13+16]
-    cmp al, r12b
-    jne .skip_concat
-
-    ; str_concat(result, node->hash)
-    mov rdi, r10
-    mov rsi, qword [r13+24]
-    call str_concat
-    test rax, rax
-    je .concat_fail
-
-    mov rbx, rax
-    mov rdi, r10
-    call free
-    mov r10, rbx
-
-.skip_concat:
-    mov r13, qword [r13]
-    jmp .concat_loop
-
-.end_concat_loop:
-    mov rax, r10
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
-    ret
-
-.concat_fail:
-    mov rdi, r10
-    call free
-
-.return_concat_null_preserve:
-    xor rax, rax
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
+.done:
+    mov     rax, r14
+    pop     r12
+    pop     rbx
     ret
