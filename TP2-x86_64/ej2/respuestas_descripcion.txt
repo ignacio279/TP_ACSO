@@ -13,33 +13,17 @@ En esta fase, el programa toma dos números enteros como entrada, primero, el pr
 
 PHASE_3
 
-En la fase 3, el programa espera como entrada dos valores: un string y un número. Tras parsear la entrada, se llama a la función readlines, que carga una lista de strings desde un archivo externo. Luego invoca cuenta(array, pattern, 0, n‑1), que recorre recursivamente esas n cadenas contando cuántas veces aparece el patrón. Finalmente compara ese recuento con el entero n que introdujimos; si coinciden exactamente (y n está dentro del límite permitido), libera la memoria y la fase se desactiva, en caso contrario la bomba explota.
-La solución para esta fase consiste en ingresar como string "aboquillar" y como número 10692. Este input logra que cuenta devuelva 9999 y que dicho número coincida con el valor ingresado, por lo que la bomba no explota.
+En la fase 3 vi que el programa espera como entrada dos valores: un string y un número, una vez que recibe eso, se llama a la función readlines, que carga una lista de strings desde un archivo externo. Luego usa cuenta(array, pattern, 0, n‑1), que recorre recursivamente esaas palabras contando cuántas veces aparece. Finalmente compara ese recuento con el entero n que introdujimos; si coinciden exactamente (y n está dentro del límite permitido que era 99999), libera la memoria y la fase se desactiva.
+La solución para esta fase consiste en ingresar como string "aboquillar" y como número 10692. Este input logra que cuenta devuelva 99999 y que dicho número coincida con el valor ingresado, por lo que la bomba no explota.
 Sin embargo, esta fase tiene una particularidad importante: si se ingresan tres valores, y el tercer string es exactamente "abrete_sesamo", el programa detecta esta condición y activa una fase secreta. Esta funcionalidad está oculta dentro de la función phase_defused, la cual verifica si el contador de inputs leídos es 3 y el tercer string coincide con la palabra clave. De este modo, el input "aboquillar 10692 abrete_sesamo" permite acceder a la secret_phase, la cual solo puede ser activada desde esta fase
 
 PHASE_4 
 
-En la fase 4, el programa primero verifica que la entrada sea una cadena de exactamente seis caracteres. Si no se cumple esta condición, se llama a la función `explode_bomb`, lo que indica que cualquier desviación del largo esperado causa un fallo inmediato. Esta validación se hace utilizando una función de longitud de cadena.
-
-Una vez que se confirma el largo correcto, el programa procede a analizar carácter por carácter. Para cada uno, extrae sus últimos cuatro bits mediante una operación `AND` con `0xF`, lo que equivale a tomar su valor módulo 16. Este número se usa como índice para acceder a un arreglo de 16 enteros ubicado en memoria. El valor obtenido del arreglo en esa posición se suma a un acumulador que comienza en cero.
+En la fase 4, el programa primero verifica que la entrada sea una cadena de exactamente seis caracteres, despues el programa procede a analizar carácter por carácter. Para cada uno, extrae sus últimos cuatro bits mediante una operación `AND` con `0xF`, lo que equivale a tomar su valor módulo 16. Este número se usa como índice para acceder a un arreglo de 16 enteros ubicado en memoria. El valor obtenido del arreglo en esa posición se suma a un acumulador que comienza en cero.
 
 Después de procesar los seis caracteres, se verifica si la suma acumulada es igual a `0x3E`, es decir, 62 en decimal. Si no se alcanza ese valor exacto, también se activa la bomba. Esto implica que la clave está en encontrar una combinación de seis caracteres tal que, al aplicarles la transformación mencionada y sumar los valores resultantes del arreglo, el total sea exactamente 62.
 
 La cadena que cumple con esta condición es `013679`. Cada uno de estos caracteres tiene un valor ASCII cuyo residuo módulo 16 corresponde a índices específicos del arreglo. La suma de los valores en esas posiciones da como resultado 62, cumpliendo con el requerimiento del programa. Por eso, esta es la solución correcta para desactivar la fase 4 sin explotar la bomba.
-
-
-
-
-Para encontrar el input correcto para la fase 4, primero analicé el código ensamblador y entendí que la función esperaba dos enteros ingresados por el usuario, que serían almacenados en la pila mediante sscanf. 
-Luego, el primer número se enmascara con & 0xF (limitándolo al rango de 0 a 15) y se utiliza como índice para acceder a un array de enteros.
-A partir de ese índice inicial, el programa recorre el array siguiendo los valores como nuevos índices: en cada paso, toma el valor actual como el siguiente índice, suma ese valor a un acumulador y repite el proceso hasta llegar al valor 15.
-Se requiere que este recorrido dure exactamente 7 pasos y que la suma total de los valores leídos coincida con el segundo número ingresado. 
-Para resolverlo, primero localicé la dirección real del array a través del cálculo de rip + 0xcbcf0 y verifiqué el contenido del array en memoria usando GDB. 
-Luego, inspeccioné manualmente los valores del array para encontrar un camino de 7 pasos que termine en 15. 
-Encontré que comenzando con el índice 8 (es decir, ingresando como primer número cualquier valor que cumpla n & 0xF = 8), el recorrido seguía los valores: 0 → 7 → 9 → 12 → 2 → 6 → 15, cumpliendo exactamente con los 7 pasos requeridos. 
-Finalmente, sumando los valores leídos (0 + 7 + 9 + 12 + 2 + 6 + 15) obtuve 51, que debía ser el segundo número del input. 
-Así, el input correcto resultó ser 8 51, que cumple todas las condiciones del programa y desactiva la bomba.
-
 
 SECRET_PHASE 
 
