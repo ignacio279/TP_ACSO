@@ -42,6 +42,14 @@ string_proc_list_create_asm:
 ;   type = valor (offset 16, 1 byte)
 ;   hash = puntero (offset 24)
 ; ---------------------------------------------------------------
+; ---------------------------------------------------------------
+; string_proc_node_create_asm:
+; Reserva 32 bytes para un nodo y asigna:
+;   next = 0 (offset 0)
+;   previous = 0 (offset 8)
+;   type = valor (offset 16, 1 byte)
+;   hash = puntero (offset 24)
+; ---------------------------------------------------------------
 string_proc_node_create_asm:
     ;––– Guardamos type y hash en la pila –––
     push  rdi        ; rdi = type
@@ -71,8 +79,6 @@ string_proc_node_create_asm:
     pop   rdi
     xor   rax, rax
     ret
-
-
 ; ---------------------------------------------------------------
 ; string_proc_list_add_node_asm:
 ; Parámetros:
