@@ -81,40 +81,82 @@ string_proc_list_add_node_asm:
     pop     rbx
     ret
 
-string_proc_list_concat_asm:
-    push    rbx
+; ---------------------------------------------------------------
+; Versión “alternativa” de string_proc_list_concat_asm
+; hace lo mismo que tu original, pero con cambios de registro,
+; etiquetas y prologue/epilogue.
+; Parámetros:
+;   RDI = lista (string_proc_list*)
+;   RSI = type (uint8_t)
+;   RDX = prefijo (char*)
+; ---------------------------------------------------------------
+string_proc_list_concat_alt:
+    ; — Prologue clásico con frame pointer —
+    push    rbp
+    mov     rbp, rsp
     push    r12
-    mov     rbx, rdi            
-    mov     r12b, sil           
-    mov     r13, rdx           
+    push    r13
+    push    r14
 
-    mov     rdi, empty_string
-    mov     rsi, r13
+    ; Guarda parámetros en registros “nuevos”
+    mov     r13, rdi        ; r13 = lista
+    mov     r12b, sil       ; r12b = type
+    mov     r14, rdx        ; r14 = prefijo
+
+    ; Duplica empty_string+prefijo para arrancar result
+    lea     rdi, [rel empty_string]  ; rdi = &empty_string
+    mov     rsi, r14                  ; rsi = prefijo
     call    str_concat
-    mov     r14, rax            
+    test    rax, rax
+    je      .cleanup_rtn
+    mov     rbx, rax                  ; rbx = result acumulado
 
-    mov     r15, [rbx]          
+    ; Ahora recorremos la lista nodo a nodo
+    mov     rcx, [r13]      ; rcx = lista->first (primer nodo)
+.alt_loop:
+    cmp     rcx, 0
+    je      .alt_return
 
-.loop:
-    test    r15, r15
-    jz      .done
-    movzx   eax, byte [r15 + 16]
+    movzx   eax, byte [rcx+16]   ; eax = current_node->type
     cmp     al, r12b
-    jne     .skip
-    ; concat
-    mov     rdi, r14
-    mov     rsi, [r15 + 24]
+    jne     .alt_next
+
+    ; Concatenar hash: result = str_concat(result, node->hash)
+    mov     rdi, rbx
+    mov     rsi, [rcx+24]        ; rsi = current_node->hash
     call    str_concat
-    mov     rdx, r14
-    mov     r14, rax
+    test    rax, rax
+    je      .cleanup_rtn
+
+    ; Si tuvo éxito, liberar el antiguo result
+    mov     rdx, rbx
+    mov     rbx, rax              ; rbx = nuevo result
     mov     rdi, rdx
     call    free
-.skip:
-    mov     r15, [r15]
-    jmp     .loop
 
-.done:
-    mov     rax, r14
+.alt_next:
+    mov     rcx, [rcx]   ; next node
+    jmp     .alt_loop
+
+.alt_return:
+    mov     rax, rbx      ; devolver result
+
+    ; — Epilogue limpio —
+    pop     r14
+    pop     r13
     pop     r12
-    pop     rbx
+    mov     rsp, rbp
+    pop     rbp
+    ret
+
+.cleanup_rtn:
+    ; en caso de error liberamos y devolvemos NULL
+    mov     rdi, rbx
+    call    free
+    xor     rax, rax
+    pop     r14
+    pop     r13
+    pop     r12
+    mov     rsp, rbp
+    pop     rbp
     ret
