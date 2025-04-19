@@ -43,18 +43,40 @@ string_proc_list_create_asm:
 ;   hash = puntero (offset 24)
 ; ---------------------------------------------------------------
 string_proc_node_create_asm:
-    mov edi, 32         ; sizeof(string_proc_node) = 32 bytes
-    call malloc           
-    test rax, rax           
-    je .node_null
-    mov qword [rax], 0      ; node->next = 0
-    mov qword [rax+8], 0    ; node->previous = 0
-    mov byte [rax+16], dil  ; node->type = type (de dil)
-    mov qword [rax+24], rsi ; node->hash = hash (en rsi)
-    ret
-.node_null:
-    xor rax, rax    
-    ret
+-    mov edi, 32         ; sizeof(string_proc_node) = 32 bytes
+-    call malloc
+-    test rax, rax
+-    je .node_null
+-    mov qword [rax], 0      ; node->next = 0
+-    mov qword [rax+8], 0    ; node->previous = 0
+-    mov byte [rax+16], dil  ; node->type = type (de dil)
+-    mov qword [rax+24], rsi ; node->hash = hash (en rsi)
+-    ret
++.  ; con este push/push salvamos type (rdi) y hash (rsi):
++    push  rdi            ; [rsp]   ← type
++    push  rsi            ; [rsp+8] ← hash
++
++    mov   edi, 32        ; sizeof(string_proc_node)
++    call  malloc
++    test  rax, rax
++    je    .node_null
++
++    ; recuperamos primero hash y type de la pila:
++    pop   rsi            ; rsi = hash
++    pop   rdi            ; rdi = type
++
++    mov   qword [rax],    0    ; node->next     = NULL
++    mov   qword [rax+8],  0    ; node->previous = NULL
++    mov   byte  [rax+16], dil  ; node->type     = type
++    mov   qword [rax+24], rsi  ; node->hash     = hash pointer
++    ret
+
+ .node_null:
++    ; en el caso de malloc failed, también sacamos los dos valores antes de volver
+     xor   rax, rax
++    pop   rsi
++    pop   rdi
+     ret
 
 ; ---------------------------------------------------------------
 ; string_proc_list_add_node_asm:
