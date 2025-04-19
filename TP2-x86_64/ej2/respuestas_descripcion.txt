@@ -2,25 +2,30 @@ Ignacio Vargas Fernandez
 ivargasfernandez@udesa.edu.ar
 
 PHASE_1
-Al desensamblar la phase_1, noté que se le pasaba el input del usuario como primer argumento a la función strings_not_equal, junto con una cadena constante ubicada en la dirección 0x4c9a58. Usando GDB con x/s 0x4c9a58, vi que la cadena era:
+lo que hice fue ver que para desactivar la bomba necesitaba encontrar un string y vi que me daban una direccin de memoria entonces lei lo que estaba ubicado en la dirección 0x4c9a58. Usando GDB con x/s 0x4c9a58, vi que la cadena era:
 "Los hermanos sean unidos porque esa es la ley primera porque si entre ellos se pelean los devoran los de ajuera"
-El código explota la bomba si los strings no coinciden (jne en la línea <+22>), así que simplemente ingresé exactamente esa frase como input para desactivar la fase.
+El código explota la bomba si los strings no coinciden, entonces la ingresé a esa frase como input para desactivar la fase.
+
 
 PHASE_2 
 
-En esta fase, el programa toma dos números enteros como entrada. Para obtenerlos, el código utiliza la función strtoq, que convierte strings en números. Luego, guarda estos valores en dos variables y realiza una serie de chequeos para verificar si cumplen ciertas condiciones específicas.
-
-Primero, el programa evalúa si el producto entre ambos números es distinto de cero. Esto quiere decir que ninguno de los dos puede ser igual a cero, ya que eso provocaría la explosión de la bomba. A continuación, se verifica si la suma entre ambos números es igual a 0x3d83, que en decimal equivale a 15747. Finalmente, se llama a una función llamada misterio, que simplemente realiza un XOR entre ambos valores y verifica que el resultado sea negativo. Si el resultado del XOR no es negativo, también se detona la bomba.
-
-La solución consiste en encontrar dos números que cumplan las tres condiciones anteriores. Para ello, elegí los valores -1 y 15748. Estos dos números multiplicados no dan cero (ya que -1 * 15748 = -15748), su suma es exactamente 15747 (-1 + 15748 = 15747), y además, el resultado del XOR (-1 ^ 15748) es un número negativo, cumpliendo así con la condición requerida por la función misterio.
+En esta fase, el programa toma dos números enteros como entrada, primero, el programa evalúa si el producto entre ambos números es distinto de cero, despues, se verifica si la suma entre ambos números es igual a 0x3d83, que en decimal equivale a 15747. Finalmente, se llama a una función llamada misterio, que simplemente realiza un XOR entre ambos valores y verifica que el resultado sea negativo, la solución consiste en encontrar dos números que cumplan las tres condiciones anteriores. Para ello, elegí los valores -1 y 15748. Estos dos números multiplicados no dan cero (-1 * 15748 = -15748), la suma es exactamente 15747 (-1 + 15748 = 15747) y el resultado del XOR (-1 ^ 15748) es un número negativo, cumpliendo así con la condición requerida por la función misterio y con las otras dos condiciones.
 
 PHASE_3
 
-En la fase 3, el programa espera como entrada dos valores: un string y un número. Si el formato no se respeta, la bomba explota. Tras parsear la entrada, se llama a la función readlines, que carga una lista de strings desde un archivo externo. Luego, la función cuenta procesa estos valores aplicando una lógica de búsqueda recursiva que recuerda a una búsqueda binaria. El objetivo es que dicha función devuelva exactamente el valor 0x270f (9999 en decimal), y además, que ese número coincida con el valor ingresado como segundo parámetro. Si se cumple esta condición, el programa continúa y libera correctamente la memoria utilizada.
+En la fase 3, el programa espera como entrada dos valores: un string y un número. Tras parsear la entrada, se llama a la función readlines, que carga una lista de strings desde un archivo externo. Luego, la función cuenta procesa estos valores aplicando una lógica de búsqueda recursiva que recuerda a una búsqueda binaria. El objetivo es que dicha función devuelva exactamente el valor 0x270f (9999 en decimal), y además, que ese número coincida con el valor ingresado como segundo parámetro. Si se cumple esta condición, el programa continúa y libera correctamente la memoria utilizada.
 
 La solución para esta fase consiste en ingresar como string "aboquillar" y como número 10692. Este input logra que cuenta devuelva 9999 y que dicho número coincida con el valor ingresado, por lo que la bomba no explota.
 
-Sin embargo, esta fase tiene una particularidad importante: si se ingresan tres valores (es decir, si el usuario proporciona una línea con formato %s %d %s), y el tercer string es exactamente "abrete_sesamo", el programa detecta esta condición y activa una fase secreta. Esta funcionalidad está oculta dentro de la función phase_defused, la cual verifica si el contador de inputs leídos es 4 y el tercer string coincide con la palabra clave. De este modo, el input "aboquillar 10692 abrete_sesamo" permite acceder a la secret_phase, la cual solo puede ser activada desde aquí, sin necesidad de pasar las demás fases.
+Sin embargo, esta fase tiene una particularidad importante: si se ingresan tres valores, y el tercer string es exactamente "abrete_sesamo", el programa detecta esta condición y activa una fase secreta. Esta funcionalidad está oculta dentro de la función phase_defused, la cual verifica si el contador de inputs leídos es 3 y el tercer string coincide con la palabra clave. De este modo, el input "aboquillar 10692 abrete_sesamo" permite acceder a la secret_phase, la cual solo puede ser activada desde esta fase
+
+Para desactivar esta fase, se necesita un input de al menos dos palabras, donde la primera sea una cadena y la segunda un número entero. 
+La fase reserva memoria para la cadena, y luego con sscanf extrae ambos valores.
+Después, llama a readlines con ese número, que devuelve un array de strings. 
+Luego usa la función cuenta para contar cuántas veces aparece la palabra en ese array (hasta la posición n-1). 
+El resultado de cuenta debe ser igual al número ingresado, y además no puede superar cierto rango (para evitar overflow). 
+El input "aboquillar 685 abrete_sesamo" desactiva correctamente la bomba porque la palabra "aboquillar" aparece exactamente 685 veces en el array retornado por readlines, cumpliendo con todas las condiciones.
+
 
 PHASE_4 
 
