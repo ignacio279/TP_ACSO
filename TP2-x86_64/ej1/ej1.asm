@@ -4,7 +4,7 @@
 %define FALSE 0
 
 section .data
-
+empty_string: db 0
 section .text
 
 global string_proc_list_create_asm
