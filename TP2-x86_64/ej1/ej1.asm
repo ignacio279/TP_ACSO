@@ -90,7 +90,7 @@ string_proc_list_add_node_asm:
 ;   RSI = type (uint8_t)
 ;   RDX = prefijo (char*)
 ; ---------------------------------------------------------------
-string_proc_list_concat_alt:
+string_proc_list_concat_asm:
     ; — Prologue clásico con frame pointer —
     push    rbp
     mov     rbp, rsp
