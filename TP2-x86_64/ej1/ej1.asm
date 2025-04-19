@@ -27,30 +27,33 @@ string_proc_list_create_asm:
     xor rax, rax
     ret
 
-
-
-; ---------------------------------------------------------------
-; string_proc_node_create_asm
-;   RDI = uint8_t type
-;   RSI = char*   hash
-; ---------------------------------------------------------------
 string_proc_node_create_asm:
-    mov     edi, 32           ; sizeof(string_proc_node)
+    push    rbx
+    push    r12            
+
+    mov     bl, dil        
+    mov     r12, rsi        
+
+    mov     edi, 32         
     call    malloc
     test    rax, rax
-    je      .node_null
+    jz      .fail
 
-    mov     qword [rax+0],  0 ; node->next     = NULL
-    mov     qword [rax+8],  0 ; node->previous = NULL
-    mov     byte  [rax+16], dil  ; node->type   = type
-    mov     qword [rax+24], rsi  ; node->hash   = hash (sin duplicar)
+    mov     byte  [rax + 16], bl         
+    mov     qword [rax + 24], r12        
+    mov     qword [rax], 0              
+    mov     qword [rax + 8], 0           
 
+    pop     r12
+    pop     rbx
     ret
 
-.node_null:
+.fail:
+    pop     r12
     xor     rax, rax
+    pop     rbx
     ret
-
+    
 string_proc_list_add_node_asm:
     push    rbx
     mov     rbx, rdi           
