@@ -13,7 +13,6 @@ global string_proc_list_concat_asm
 extern malloc
 extern free
 extern str_concat
-extern strdup
 
 
 string_proc_list_create_asm:
@@ -31,52 +30,25 @@ string_proc_list_create_asm:
 
 
 ; ---------------------------------------------------------------
-; string_proc_node_create_asm (versión “disfrazada”)
-;   RDI = uint8_t type  (dil)
-;   RSI = char*   hash  (rsi)
+; string_proc_node_create_asm
+;    RDI = uint8_t type
+;    RSI = char*   hash
 ; ---------------------------------------------------------------
 string_proc_node_create_asm:
-    push    rbx
-    push    r12
-    push    r13
-
-    ;--- guardar parámetros en regs únicos ---
-    mov     r12b, dil        ; r12b = type
-    mov     r13, rsi         ; r13  = ptr a hash original
-
-    ;--- duplicar el hash con strdup ---
-    mov     rdi, r13         ; RDI = hash
-    call    strdup
-    test    rax, rax
-    je      .fail            ; si falla strdup, saltar a fail
-    mov     r13, rax         ; r13 = ptr al hash duplicado
-
-    ;--- reservar memoria para el nodo ---
-    mov     edi, 32          ; tamaño de string_proc_node
+    mov     edi, 32           ; sizeof(string_proc_node)
     call    malloc
     test    rax, rax
-    je      .free_hash       ; si malloc falla, liberar el hash y salir
+    je      .node_null
 
-    ;--- inicializar campos del nodo ---
-    xor     rbx, rbx
-    mov     [rax+0],  rbx    ; node->next     = NULL
-    mov     [rax+8],  rbx    ; node->previous = NULL
-    mov     byte [rax+16], r12b  ; node->type  = type
-    mov     [rax+24], r13    ; node->hash     = hash duplicado
+    mov     qword [rax+0],  0 ; node->next     = NULL
+    mov     qword [rax+8],  0 ; node->previous = NULL
+    mov     byte  [rax+16], dil ; node->type   = type
+    mov     qword [rax+24], rsi ; node->hash   = hash (sin duplicar)
 
-    jmp     .done
+    ret
 
-.free_hash:
-    mov     rdi, r13
-    call    free             ; liberar el duplicado si malloc falló
-
-.fail:
-    xor     rax, rax         ; retornar NULL
-
-.done:
-    pop     r13
-    pop     r12
-    pop     rbx
+.node_null:
+    xor     rax, rax
     ret
 
 string_proc_list_add_node_asm:
