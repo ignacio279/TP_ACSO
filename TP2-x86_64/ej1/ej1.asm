@@ -58,44 +58,41 @@ string_proc_node_create_asm:
 
 ; ---------------------------------------------------------------
 ; string_proc_list_add_node_asm:
-; RDI=list, RSI=type, RDX=hash
+;   RDI = pointer a lista
+;   RSI = type (uint8_t)
+;   RDX = hash (char*)
 ; ---------------------------------------------------------------
 string_proc_list_add_node_asm:
-    test  rdi, rdi
-    je    .L_add_ret
+    test    rdi, rdi             ; if (!list) return;
+    je      .Lreturn
 
-    ; save list pointer
-    mov   rbx, rdi
+    ; Preparamos los parámetros para string_proc_node_create_asm:
+    mov     edi, esi             ; edi = (uint32_t)type
+    mov     rsi, rdx             ; rsi = hash pointer
+    call    string_proc_node_create_asm
+    test    rax, rax             ; if (new_node == NULL) return;
+    je      .Lreturn
 
-    ; call node_create(type,hash)
-    mov   edi, sil           ; edi = type (low byte of rsi)
-    mov   rsi, rdx           ; rsi = hash
-    call  string_proc_node_create_asm
-    test  rax, rax
-    je    .L_add_cleanup
+    mov     r9, rax              ; r9 = new_node
 
-    mov   r9, rax            ; r9 = new_node
+    ; Si la lista está vacía (last == NULL)...
+    mov     rax, [rdi + 8]       ; rax = list->last
+    test    rax, rax
+    je      .Lempty
 
-    ; link it
-    mov   rax, [rbx + 8]     ; rax = list->last
-    test  rax, rax
-    jne   .L_add_link
+    ; ...sino enlazamos al final:
+    mov     [r9 + 8], rax        ; new_node->previous = old_last
+    mov     [rax    ], r9        ; old_last->next   = new_node
+    mov     [rdi + 8], r9        ; list->last       = new_node
+    jmp     .Lreturn
 
-    ; empty list case
-    mov   [rbx    ], r9      ; list->first = new_node
-    mov   [rbx + 8], r9      ; list->last  = new_node
-    jmp   .L_add_cleanup
+.Lempty:
+    mov     [rdi    ], r9        ; list->first = new_node
+    mov     [rdi + 8], r9        ; list->last  = new_node
 
-.L_add_link:
-    mov   [r9 + 8], rax      ; new_node->previous = old last
-    mov   [rax    ], r9      ; old_last->next      = new_node
-    mov   [rbx + 8], r9      ; list->last          = new_node
-
-.L_add_cleanup:
+.Lreturn:
     ret
 
-.L_add_ret:
-    ret
 
 ; ---------------------------------------------------------------
 ; string_proc_list_concat_asm:
