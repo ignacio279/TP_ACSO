@@ -34,24 +34,39 @@ string_proc_list_create_asm:
     ret
 
 
-; ---------------------------------------------------------------
-; string_proc_node_create_asm:
-; Reserva 32 bytes para un nodo e inicializa sus campos:
-;   next = 0, previous = 0, type = valor, hash = puntero
-; ---------------------------------------------------------------
+; ------------------------------------------
+; string_proc_node_create_asm
+; Entrada: dil = type, rsi = hash
+; Salida: rax = nuevo nodo o NULL
+; ------------------------------------------
 string_proc_node_create_asm:
-    mov edi, 32           ; tamaño de string_proc_node
-    call malloc
-    test rax, rax
-    je .node_null
-    mov qword [rax], 0       ; node->next     = NULL
-    mov qword [rax+8], 0     ; node->previous = NULL
-    mov byte  [rax+16], dil  ; node->type     = type (dil)
-    mov qword [rax+24], rsi  ; node->hash     = hash (rsi)
+    push    rbx
+    push    r12            
+
+    mov     bl, dil         ; BL = type (byte)
+    mov     r12, rsi        ; R12 = hash
+
+    mov     edi, 32         ; malloc(sizeof(node))
+    call    malloc
+    test    rax, rax
+    jz      .fail
+
+    ; inicializar nodo
+    mov     byte  [rax + 16], bl         ; type
+    mov     qword [rax + 24], r12        ; hash (puntero sin copiar string)
+    mov     qword [rax], 0               ; next
+    mov     qword [rax + 8], 0           ; previous
+
+    pop     r12
+    pop     rbx
     ret
-.node_null:
-    xor rax, rax
+
+.fail:
+    pop     r12
+    xor     rax, rax
+    pop     rbx
     ret
+
 
 ; ------------------------------------------
 ; string_proc_list_add_node_asm
