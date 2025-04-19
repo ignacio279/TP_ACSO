@@ -82,81 +82,79 @@ string_proc_list_add_node_asm:
     ret
 
 ; ---------------------------------------------------------------
-; Versión “alternativa” de string_proc_list_concat_asm
-; hace lo mismo que tu original, pero con cambios de registro,
-; etiquetas y prologue/epilogue.
-; Parámetros:
-;   RDI = lista (string_proc_list*)
-;   RSI = type (uint8_t)
-;   RDX = prefijo (char*)
+; string_proc_list_concat_asm:
+;   RDI = string_proc_list*  (lista)
+;   RSI = uint8_t            (type)
+;   RDX = char*              (prefijo)
 ; ---------------------------------------------------------------
 string_proc_list_concat_asm:
-    ; — Prologue clásico con frame pointer —
+    ; — Prologue completo —
     push    rbp
     mov     rbp, rsp
+    push    rbx
     push    r12
     push    r13
     push    r14
+    push    r15
 
-    ; Guarda parámetros en registros “nuevos”
-    mov     r13, rdi        ; r13 = lista
-    mov     r12b, sil       ; r12b = type
-    mov     r14, rdx        ; r14 = prefijo
+    ; Validar lista
+    test    rdi, rdi
+    je      .ret_null
 
-    ; Duplica empty_string+prefijo para arrancar result
-    lea     rdi, [rel empty_string]  ; rdi = &empty_string
-    mov     rsi, r14                  ; rsi = prefijo
+    mov     rbx, rdi       ; rbx = lista
+    mov     r12b, sil      ; r12b = type
+    mov     r13, rdx       ; r13 = prefijo
+
+    ; result = str_concat("", prefijo)
+    lea     rdi, [rel empty_string]
+    mov     rsi, r13
     call    str_concat
     test    rax, rax
-    je      .cleanup_rtn
-    mov     rbx, rax                  ; rbx = result acumulado
+    je      .ret_null
+    mov     r14, rax       ; r14 = result acumulado
 
-    ; Ahora recorremos la lista nodo a nodo
-    mov     rcx, [r13]      ; rcx = lista->first (primer nodo)
-.alt_loop:
-    cmp     rcx, 0
-    je      .alt_return
+    ; puntero al primer nodo
+    mov     r15, [rbx]     ; r15 = lista->first
 
-    movzx   eax, byte [rcx+16]   ; eax = current_node->type
+.loop_nodes:
+    test    r15, r15
+    jz      .done
+
+    ; compara r15->type con r12b
+    movzx   eax, byte [r15+16]
     cmp     al, r12b
-    jne     .alt_next
+    jne     .next_node
 
-    ; Concatenar hash: result = str_concat(result, node->hash)
-    mov     rdi, rbx
-    mov     rsi, [rcx+24]        ; rsi = current_node->hash
+    ; tmp = str_concat(result, r15->hash)
+    mov     rdi, r14
+    mov     rsi, [r15+24]
     call    str_concat
     test    rax, rax
-    je      .cleanup_rtn
+    je      .ret_null
 
-    ; Si tuvo éxito, liberar el antiguo result
-    mov     rdx, rbx
-    mov     rbx, rax              ; rbx = nuevo result
+    ; libera el antiguo result
+    mov     rdx, r14
+    mov     r14, rax       ; r14 = nuevo result
     mov     rdi, rdx
     call    free
 
-.alt_next:
-    mov     rcx, [rcx]   ; next node
-    jmp     .alt_loop
+.next_node:
+    mov     r15, [r15]     ; avanzar al siguiente nodo
+    jmp     .loop_nodes
 
-.alt_return:
-    mov     rax, rbx      ; devolver result
+.done:
+    mov     rax, r14       ; devolver result
+    jmp     .epilogue
 
-    ; — Epilogue limpio —
+.ret_null:
+    xor     rax, rax       ; devuelve NULL
+
+.epilogue:
+    pop     r15
     pop     r14
     pop     r13
     pop     r12
-    mov     rsp, rbp
-    pop     rbp
-    ret
-
-.cleanup_rtn:
-    ; en caso de error liberamos y devolvemos NULL
-    mov     rdi, rbx
-    call    free
-    xor     rax, rax
-    pop     r14
-    pop     r13
-    pop     r12
+    pop     rbx
     mov     rsp, rbp
     pop     rbp
     ret
