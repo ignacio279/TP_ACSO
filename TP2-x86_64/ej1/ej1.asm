@@ -42,7 +42,11 @@ string_proc_list_create_asm:
 ;   type = valor (offset 16, 1 byte)
 ;   hash = puntero (offset 24)
 ; ---------------------------------------------------------------
-string_proc_node_create_asm:
+--- a/ej1.asm
++++ b/ej1.asm
+@@ -41,13 +41,24 @@ string_proc_node_create_asm:
+     ; ---------------------------------------------------------------
+ string_proc_node_create_asm:
 -    mov edi, 32         ; sizeof(string_proc_node) = 32 bytes
 -    call malloc
 -    test rax, rax
@@ -77,6 +81,7 @@ string_proc_node_create_asm:
 +    pop   rsi
 +    pop   rdi
      ret
+
 
 ; ---------------------------------------------------------------
 ; string_proc_list_add_node_asm:
