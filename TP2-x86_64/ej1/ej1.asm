@@ -67,32 +67,38 @@ string_proc_node_create_asm:
 ; Si ya tiene nodos, lo enlaza al final.
 ; ---------------------------------------------------------------
 string_proc_list_add_node_asm:
-    push    rbx
-    mov     rbx, rdi            ; lista
-    mov     dil, sil
-    mov     rsi, rdx
-    call    string_proc_node_create_asm
-    test    rax, rax
-    jz      .fin
-    mov     rcx, [rbx]          ; head
-    test    rcx, rcx
-    jnz     .not_empty
+    test rdi, rdi
+    je .return_add_node      
 
-    ; lista vacía
-    mov     [rbx], rax
-    mov     [rbx + 8], rax
-    jmp     .fin
+    mov r8, rdi              ; r8 = pointer a list
 
-.not_empty:
-    mov     rdx, [rbx + 8]      ; tail
-    mov     [rdx], rax          ; tail->next = nodo
-    mov     [rax + 8], rdx      ; nodo->prev = tail
-    mov     [rbx + 8], rax      ; tail = nodo
+    ; Preparar parámetros para crear el nodo:
+    ; Pasar RSI = type, RDX = hash. Llamamos a string_proc_node_create_asm.
+    mov rdi, rsi            ; rdi = type
+    mov rsi, rdx            ; rsi = hash
+    call string_proc_node_create_asm
+    test rax, rax            
+    je .return_add_node
+    mov r9, rax             ; r9 = new node
 
-.fin:
-    pop     rbx
+    ; Revisar si la lista no está vacía: list->last se encuentra en [r8+8].
+    mov rax, qword [r8+8]    
+    test rax, rax
+    je .empty_list           
+
+    ; Si la lista no está vacía:
+    mov qword [r9+8], rax   ; new_node->previous = list->last
+    mov qword [rax], r9     ; list->last->next = new_node
+    mov qword [r8+8], r9    ; list->last = new_node
+    jmp .return_add_node_done
+
+.empty_list:
+    mov qword [r8], r9      ; list->first = new_node
+    mov qword [r8+8], r9    ; list->last = new_node
+
+.return_add_node_done:
+.return_add_node:
     ret
-
 
 ; ---------------------------------------------------------------
 ; string_proc_list_concat_asm:
@@ -111,75 +117,75 @@ string_proc_list_add_node_asm:
 ; Se preservan los registros no volátiles: RBX, R12, R13 y se copia list pointer en R14.
 ; ---------------------------------------------------------------
 string_proc_list_concat_asm:
+    ; Preservar registros no volátiles que usaremos: RBX, R12, R13, R14.
     push rbx
     push r12
     push r13
     push r14
 
+    ; Verificar que list y hash no sean NULL.
     test rdi, rdi
-    je .return_null
+    je .return_concat_null_preserve
     test rdx, rdx
-    je .return_null
+    je .return_concat_null_preserve
 
+    ; Guardar el pointer a la lista en R14.
     mov r14, rdi         ; r14 = list pointer
+
+    ; Guardar el parámetro "type" (que viene en RSI) en R12.
     mov r12, rsi         ; r12 = type
 
-    mov rdi, rdx
+    ; Llamar a strdup(hash) con hash en RDX.
+    mov rdi, rdx         ; parámetro: hash
     call strdup
     test rax, rax
-    je .return_null
-    mov r10, rax         ; r10 = result
-    mov r15, r10         ; guardamos original
+    je .return_concat_null_preserve
+    mov r10, rax         ; r10 = result (cadena acumulada)
 
-    mov r13, qword [r14] ; r13 = current node
+    ; Cargar el primer nodo: list->first, que se encuentra en [r14]
+    mov r13, qword [r14] ; r13 = current_node
 
-.loop:
-    test r13, r13
-    je .end
+.concat_loop:
+    test r13, r13        ; si current_node es NULL, terminamos
+    je .end_concat_loop
 
+    ; Comparar current_node->type (byte en [r13+16]) con el valor original de "type" (en r12b)
     mov al, byte [r13+16]
     cmp al, r12b
-    jne .next
+    jne .skip_concat
 
-    ; str_concat(r10, r13->hash)
-    mov rdi, r10
-    mov rsi, qword [r13+24]
+    ; Llamar a str_concat(result, current_node->hash)
+    mov rdi, r10              ; primer parámetro: result
+    mov rsi, qword [r13+24]     ; segundo parámetro: current_node->hash (offset 24)
     call str_concat
     test rax, rax
-    je .fail
+    je .concat_fail         ; si falla, liberar result y retornar NULL
 
-    ; evitar doble free
-    cmp rax, r10
-    je .next
-
-    ; liberar solo si son distintos
+    ; Guardar el nuevo puntero en RBX antes de llamar a free.
+    mov rbx, rax            ; RBX = nuevo result
     mov rdi, r10
-    call free
+    call free               ; liberar el antiguo result
+    mov r10, rbx            ; actualizar result
 
-    mov r10, rax
-
-.next:
+.skip_concat:
+    ; Avanzar al siguiente nodo: current_node = current_node->next (offset 0)
     mov r13, qword [r13]
-    jmp .loop
+    jmp .concat_loop
 
-.end:
-    mov rax, r10
+.end_concat_loop:
+    mov rax, r10            ; colocar result en RAX
     pop r14
     pop r13
     pop r12
     pop rbx
     ret
 
-.fail:
-    cmp r10, 0
-    je .return_null
+.concat_fail:
     mov rdi, r10
     call free
-
-.return_null:
-    xor rax, rax
+.return_concat_null_preserve:
+    xor rax, rax           ; retornar NULL (0)
     pop r14
     pop r13
     pop r12
     pop rbx
-    ret
