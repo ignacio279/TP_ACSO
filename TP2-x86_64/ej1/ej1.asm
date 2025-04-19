@@ -68,37 +68,30 @@ string_proc_node_create_asm:
 ; Si ya tiene nodos, lo enlaza al final.
 ; ---------------------------------------------------------------
 string_proc_list_add_node_asm:
-    test rdi, rdi
-    je .return_add_node      
+    push    rbx
+    mov     rbx, rdi            ; lista
+    mov     dil, sil
+    mov     rsi, rdx
+    call    string_proc_node_create_asm
+    test    rax, rax
+    jz      .fin
+    mov     rcx, [rbx]          ; head
+    test    rcx, rcx
+    jnz     .not_empty
 
-    mov r8, rdi              ; r8 = pointer a list
+    ; lista vacía
+    mov     [rbx], rax
+    mov     [rbx + 8], rax
+    jmp     .fin
 
-    ; Preparar parámetros para crear el nodo:
-    ; Pasar RSI = type, RDX = hash. Llamamos a string_proc_node_create_asm.
-    mov rdi, rsi            ; rdi = type
-    mov rsi, rdx            ; rsi = hash
-    call string_proc_node_create_asm
-    test rax, rax            
-    je .return_add_node
-    mov r9, rax             ; r9 = new node
+.not_empty:
+    mov     rdx, [rbx + 8]      ; tail
+    mov     [rdx], rax          ; tail->next = nodo
+    mov     [rax + 8], rdx      ; nodo->prev = tail
+    mov     [rbx + 8], rax      ; tail = nodo
 
-    ; Revisar si la lista no está vacía: list->last se encuentra en [r8+8].
-    mov rax, qword [r8+8]    
-    test rax, rax
-    je .empty_list           
-
-    ; Si la lista no está vacía:
-    mov qword [r9+8], rax   ; new_node->previous = list->last
-    mov qword [rax], r9     ; list->last->next = new_node
-    mov qword [r8+8], r9    ; list->last = new_node
-    jmp .return_add_node_done
-
-.empty_list:
-    mov qword [r8], r9      ; list->first = new_node
-    mov qword [r8+8], r9    ; list->last = new_node
-
-.return_add_node_done:
-.return_add_node:
+.fin:
+    pop     rbx
     ret
 
 ; ---------------------------------------------------------------
