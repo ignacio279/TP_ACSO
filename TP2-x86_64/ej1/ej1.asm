@@ -133,76 +133,81 @@ string_proc_list_add_node_asm:
 ;   - Al finalizar, retorna el puntero en RAX.
 ; Se preservan los registros no volátiles: RBX, R12, R13 y se copia list pointer en R14.
 ; ---------------------------------------------------------------
+; ---------------------------------------------------------------
+; string_proc_list_concat_asm:
+;   RDI = lista, RSI = type, RDX = prefijo (hash inicial)
+; ---------------------------------------------------------------
 string_proc_list_concat_asm:
-    ; Preservar registros no volátiles que usaremos: RBX, R12, R13, R14.
-    push rbx
-    push r12
-    push r13
-    push r14
+    ;––– Guardar los callee‑saved que vamos a usar –––
+    push  rbx
+    push  r12
+    push  r13
+    push  r14
+    push  r15
 
-    ; Verificar que list y hash no sean NULL.
-    test rdi, rdi
-    je .return_concat_null_preserve
-    test rdx, rdx
-    je .return_concat_null_preserve
+    ; Verificar nulls
+    test  rdi, rdi
+    je    .return_concat_null_preserve
+    test  rdx, rdx
+    je    .return_concat_null_preserve
 
-    ; Guardar el pointer a la lista en R14.
-    mov r14, rdi         ; r14 = list pointer
+    ; Preparar iteración
+    mov   r14, rdi         ; r14 = lista
+    mov   r12, rsi         ; r12 = type
 
-    ; Guardar el parámetro "type" (que viene en RSI) en R12.
-    mov r12, rsi         ; r12 = type
+    ; Prefijo: strdup(hash)
+    mov   rdi, rdx         ; primer parámetro: prefijo
+    call  strdup
+    test  rax, rax
+    je    .return_concat_null_preserve
+    mov   r15, rax         ; r15 = result (registro callee‑saved)
 
-    ; Llamar a strdup(hash) con hash en RDX.
-    mov rdi, rdx         ; parámetro: hash
-    call strdup
-    test rax, rax
-    je .return_concat_null_preserve
-    mov r10, rax         ; r10 = result (cadena acumulada)
-
-    ; Cargar el primer nodo: list->first, que se encuentra en [r14]
-    mov r13, qword [r14] ; r13 = current_node
-
+    ; Iterar por la lista
+    mov   r13, qword [r14] ; r13 = primer nodo
 .concat_loop:
-    test r13, r13        ; si current_node es NULL, terminamos
-    je .end_concat_loop
+    test  r13, r13
+    je    .end_concat_loop
 
-    ; Comparar current_node->type (byte en [r13+16]) con el valor original de "type" (en r12b)
-    mov al, byte [r13+16]
-    cmp al, r12b
-    jne .skip_concat
+    mov   al, byte [r13+16] ; current_node->type
+    cmp   al, r12b
+    jne   .skip_concat
 
-    ; Llamar a str_concat(result, current_node->hash)
-    mov rdi, r10              ; primer parámetro: result
-    mov rsi, qword [r13+24]     ; segundo parámetro: current_node->hash (offset 24)
-    call str_concat
-    test rax, rax
-    je .concat_fail         ; si falla, liberar result y retornar NULL
+    ; str_concat(result, current_node->hash)
+    mov   rdi, r15
+    mov   rsi, qword [r13+24]
+    call  str_concat
+    test  rax, rax
+    je    .concat_fail
 
-    ; Guardar el nuevo puntero en RBX antes de llamar a free.
-    mov rbx, rax            ; RBX = nuevo result
-    mov rdi, r10
-    call free               ; liberar el antiguo result
-    mov r10, rbx            ; actualizar result
+    ; free(old_result) y actualizar
+    mov   rbx, rax         ; rbx = nuevo result
+    mov   rdi, r15
+    call  free
+    mov   r15, rbx         ; r15 = result actualizado
 
 .skip_concat:
-    ; Avanzar al siguiente nodo: current_node = current_node->next (offset 0)
-    mov r13, qword [r13]
-    jmp .concat_loop
+    mov   r13, qword [r13] ; next node
+    jmp   .concat_loop
 
 .end_concat_loop:
-    mov rax, r10            ; colocar result en RAX
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
+    mov   rax, r15         ; devolver result
+
+    ;––– Restaurar callee‑saved –––
+    pop   r15
+    pop   r14
+    pop   r13
+    pop   r12
+    pop   rbx
     ret
 
 .concat_fail:
-    mov rdi, r10
-    call free
+    mov   rdi, r15
+    call  free             ; liberar prefijo o acumulado parcial
 .return_concat_null_preserve:
-    xor rax, rax           ; retornar NULL (0)
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
+    xor   rax, rax
+    pop   r15
+    pop   r14
+    pop   r13
+    pop   r12
+    pop   rbx
+    ret
