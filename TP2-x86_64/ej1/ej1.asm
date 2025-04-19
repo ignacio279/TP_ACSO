@@ -1,10 +1,4 @@
-%define NULL 0
-
-section .data
-empty_string: db 0
-
 section .text
-
 global string_proc_list_create_asm
 global string_proc_node_create_asm
 global string_proc_list_add_node_asm
@@ -12,122 +6,166 @@ global string_proc_list_concat_asm
 
 extern malloc
 extern free
+extern strdup
 extern str_concat
 
-; ------------------------------------------
-; string_proc_list_create_asm
-; ------------------------------------------
+; ---------------------------------------------------------------
+; string_proc_list_create_asm:
+; Alloc 16 bytes for a list (two pointers) and zero them.
+; ---------------------------------------------------------------
 string_proc_list_create_asm:
-    mov     edi, 16
-    call    malloc
-    test    rax, rax 
-    jz      .fail
-    mov     qword [rax], NULL
-    mov     qword [rax + 8], NULL
+    mov   edi, 16            ; sizeof(string_proc_list)
+    call  malloc
+    test  rax, rax
+    je    .L_create_null
+    mov   qword [rax    ], 0 ; list->first  = NULL
+    mov   qword [rax + 8], 0 ; list->last   = NULL
     ret
-.fail:
-    xor     rax, rax
+.L_create_null:
+    xor   rax, rax           ; return NULL
     ret
 
-; ------------------------------------------
-; string_proc_node_create_asm
-; Entrada: dil = type, rsi = hash
-; Retorna puntero a nuevo nodo
-; ------------------------------------------
+; ---------------------------------------------------------------
+; string_proc_node_create_asm:
+; Alloc 32 bytes for a node and set its fields:
+;   next=0 @offset0, prev=0 @off8, type @off16, hash @off24
+; ---------------------------------------------------------------
 string_proc_node_create_asm:
-    push    rbx
-    mov     bl, dil             ; guardar type
-    mov     rdx, rsi            ; guardar hash en rdx
+    ; save type (rdi) and hash (rsi) across malloc
+    push  rdi
+    push  rsi
 
-    mov     edi, 32             ; malloc(32)
-    call    malloc
-    test    rax, rax
-    jz      .fail_node          ; si malloc falla, devolver NULL
+    mov   edi, 32            ; sizeof(string_proc_node)
+    call  malloc
+    test  rax, rax
+    je    .L_node_null
 
-    ; rax = puntero al nuevo nodo
-    mov     byte  [rax + 16], bl     ; nodo->type
-    mov     qword [rax + 24], rdx    ; nodo->hash (no se copia, se asigna el puntero)
-    mov     qword [rax], 0           ; nodo->next = NULL
-    mov     qword [rax + 8], 0       ; nodo->previous = NULL
+    ; restore type/hash
+    pop   rsi                ; rsi = hash
+    pop   rdi                ; rdi = type
 
-    pop     rbx
+    mov   byte  [rax +16], dil  ; node->type
+    mov   qword [rax +24], rsi  ; node->hash
+    mov   qword [rax    ], 0    ; node->next
+    mov   qword [rax + 8], 0    ; node->previous
     ret
 
-.fail_node:
-    xor     rax, rax
-    pop     rbx
+.L_node_null:
+    pop   rsi
+    pop   rdi
+    xor   rax, rax
     ret
 
-; ------------------------------------------
-; string_proc_list_add_node_asm
-; Entrada: rdi = lista, esi = type, rdx = hash
-; ------------------------------------------
+; ---------------------------------------------------------------
+; string_proc_list_add_node_asm:
+; RDI=list, RSI=type, RDX=hash
+; ---------------------------------------------------------------
 string_proc_list_add_node_asm:
-    push    rbx
-    mov     rbx, rdi            ; lista
-    mov     dil, sil
-    mov     rsi, rdx
-    call    string_proc_node_create_asm
-    test    rax, rax
-    jz      .fin
-    mov     rcx, [rbx]          ; head
-    test    rcx, rcx
-    jnz     .not_empty
+    test  rdi, rdi
+    je    .L_add_ret
 
-    ; lista vacía
-    mov     [rbx], rax
-    mov     [rbx + 8], rax
-    jmp     .fin
+    ; save list pointer
+    mov   rbx, rdi
 
-.not_empty:
-    mov     rdx, [rbx + 8]      ; tail
-    mov     [rdx], rax          ; tail->next = nodo
-    mov     [rax + 8], rdx      ; nodo->prev = tail
-    mov     [rbx + 8], rax      ; tail = nodo
+    ; call node_create(type,hash)
+    mov   edi, sil           ; edi = type (low byte of rsi)
+    mov   rsi, rdx           ; rsi = hash
+    call  string_proc_node_create_asm
+    test  rax, rax
+    je    .L_add_cleanup
 
-.fin:
-    pop     rbx
+    mov   r9, rax            ; r9 = new_node
+
+    ; link it
+    mov   rax, [rbx + 8]     ; rax = list->last
+    test  rax, rax
+    jne   .L_add_link
+
+    ; empty list case
+    mov   [rbx    ], r9      ; list->first = new_node
+    mov   [rbx + 8], r9      ; list->last  = new_node
+    jmp   .L_add_cleanup
+
+.L_add_link:
+    mov   [r9 + 8], rax      ; new_node->previous = old last
+    mov   [rax    ], r9      ; old_last->next      = new_node
+    mov   [rbx + 8], r9      ; list->last          = new_node
+
+.L_add_cleanup:
     ret
 
-; ------------------------------------------
-; string_proc_list_concat_asm
-; Entrada: rdi = lista, esi = type, rdx = string
-; Retorna: rax = string concatenada
-; ------------------------------------------
+.L_add_ret:
+    ret
+
+; ---------------------------------------------------------------
+; string_proc_list_concat_asm:
+; RDI=list, RSI=type, RDX=prefix
+; Returns concatenated string or NULL on error.
+; ---------------------------------------------------------------
 string_proc_list_concat_asm:
-    push    rbx
-    push    r12
-    mov     rbx, rdi            ; lista
-    mov     r12b, sil           ; type a buscar
-    mov     r13, rdx            ; string a concatenar
+    ; preserve callee‑saved
+    push  rbx
+    push  r12
+    push  r13
+    push  r14
+    push  r15
 
-    mov     rdi, empty_string
-    mov     rsi, r13
-    call    str_concat
-    mov     r14, rax            ; acumulador
+    test  rdi, rdi           ; list != NULL ?
+    je    .L_concat_null
+    test  rdx, rdx           ; prefix != NULL ?
+    je    .L_concat_null
 
-    mov     r15, [rbx]          ; head
+    mov   r14, rdi           ; r14 = list
+    mov   r12b, sil          ; r12b = type
 
-.loop:
-    test    r15, r15
-    jz      .done
-    movzx   eax, byte [r15 + 16]
-    cmp     al, r12b
-    jne     .skip
-    ; concat
-    mov     rdi, r14
-    mov     rsi, [r15 + 24]
-    call    str_concat
-    mov     rdx, r14
-    mov     r14, rax
-    mov     rdi, rdx
-    call    free
-.skip:
-    mov     r15, [r15]
-    jmp     .loop
+    ; result = strdup(prefix)
+    mov   rdi, rdx
+    call  strdup
+    test  rax, rax
+    je    .L_concat_null
+    mov   r15, rax           ; r15 = current result
 
-.done:
-    mov     rax, r14
-    pop     r12
-    pop     rbx
+    ; iterate nodes
+    mov   r13, [r14]         ; r13 = list->first
+.L_loop:
+    test  r13, r13
+    je    .L_done
+
+    mov   al, [r13 +16]      ; node->type
+    cmp   al, r12b
+    jne   .L_next
+
+    ; tmp = str_concat(result, node->hash)
+    mov   rdi, r15
+    mov   rsi, [r13 +24]
+    call  str_concat
+    test  rax, rax
+    je    .L_cleanup
+
+    mov   rbx, rax           ; rbx = new_result
+    mov   rdi, r15
+    call  free               ; free(old result)
+    mov   r15, rbx           ; r15 = new_result
+
+.L_next:
+    mov   r13, [r13]         ; current = current->next
+    jmp   .L_loop
+
+.L_done:
+    mov   rax, r15
+    jmp   .L_return
+
+.L_cleanup:
+    mov   rdi, r15
+    call  free
+.L_concat_null:
+    xor   rax, rax
+
+.L_return:
+    ; restore callee‑saved
+    pop   r15
+    pop   r14
+    pop   r13
+    pop   r12
+    pop   rbx
     ret
