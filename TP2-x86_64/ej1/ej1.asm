@@ -14,20 +14,22 @@ extern malloc
 extern free
 extern str_concat
 
-; ------------------------------------------
-; string_proc_list_create_asm
-; ------------------------------------------
+; ---------------------------------------------------------------
+; string_proc_list_create_asm:
+; Reserva 16 bytes para una lista (dos punteros) e inicializa ambos a 0.
+; ---------------------------------------------------------------
 string_proc_list_create_asm:
-    mov     edi, 16
-    call    malloc
-    test    rax, rax 
-    jz      .fail
-    mov     qword [rax], NULL
-    mov     qword [rax + 8], NULL
+    mov edi, 16           ; tamaño de string_proc_list
+    call malloc
+    test rax, rax
+    je .return_null
+    mov qword [rax], 0    ; list->first = NULL
+    mov qword [rax+8], 0  ; list->last  = NULL
     ret
-.fail:
-    xor     rax, rax
+.return_null:
+    xor rax, rax
     ret
+
 
 ; ------------------------------------------
 ; string_proc_node_create_asm
