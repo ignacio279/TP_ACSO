@@ -37,8 +37,7 @@ string_proc_node_create_asm:
     mov     edi, 32         
     call    malloc
     test    rax, rax
-    je      .fail           ; <-- aquí cambiamos jz por je
-
+    je      .fail          
     mov     byte  [rax + 16], bl         
     mov     qword [rax + 24], r12        
     mov     qword [rax], 0              
