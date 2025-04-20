@@ -65,7 +65,6 @@ string_proc_list_add_node_asm:
     test    rcx, rcx
     jnz     .not_empty
 
-    ; lista vacía
     mov     [rbx], rax
     mov     [rbx + 8], rax
     jmp     .fin
@@ -89,7 +88,6 @@ string_proc_list_concat_asm:
     push    r14
     push    r15
 
-    ; Validar lista
     test    rdi, rdi
     je      .ret_null
 
@@ -97,7 +95,6 @@ string_proc_list_concat_asm:
     mov     r12b, sil      
     mov     r13, rdx     
 
-    ; result = str_concat("", prefijo)
     lea     rdi, [rel empty_string]
     mov     rsi, r13
     call    str_concat
@@ -105,7 +102,6 @@ string_proc_list_concat_asm:
     je      .ret_null
     mov     r14, rax       
 
-    ; puntero al primer nodo
     mov     r15, [rbx]     
 
 .loop_nodes:
@@ -122,7 +118,6 @@ string_proc_list_concat_asm:
     test    rax, rax
     je      .ret_null
 
-    ; libera el antiguo result
     mov     rdx, r14
     mov     r14, rax       
     mov     rdi, rdx
