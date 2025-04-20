@@ -6,7 +6,6 @@ lo que hice fue ver que para desactivar la bomba necesitaba encontrar un string 
 "Los hermanos sean unidos porque esa es la ley primera porque si entre ellos se pelean los devoran los de ajuera"
 El código explota la bomba si los strings no coinciden, entonces la ingresé a esa frase como input para desactivar la fase.
 
-
 PHASE_2 
 
 En esta fase, el programa toma dos números enteros como entrada, primero, el programa evalúa si el producto entre ambos números es distinto de cero, despues, se verifica si la suma entre ambos números es igual a 0x3d83, que en decimal equivale a 15747. Finalmente, se llama a una función llamada misterio, que simplemente realiza un XOR entre ambos valores y verifica que el resultado sea negativo, la solución consiste en encontrar dos números que cumplan las tres condiciones anteriores. Para ello, elegí los valores -1 y 15748. Estos dos números multiplicados no dan cero (-1 * 15748 = -15748), la suma es exactamente 15747 (-1 + 15748 = 15747) y el resultado del XOR (-1 ^ 15748) es un número negativo, cumpliendo así con la condición requerida por la función misterio y con las otras dos condiciones.

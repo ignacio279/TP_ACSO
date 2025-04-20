@@ -37,7 +37,7 @@ string_proc_node_create_asm:
     mov     edi, 32         
     call    malloc
     test    rax, rax
-    jz      .fail
+    je      .fail           ; <-- aquí cambiamos jz por je
 
     mov     byte  [rax + 16], bl         
     mov     qword [rax + 24], r12        
@@ -53,7 +53,7 @@ string_proc_node_create_asm:
     xor     rax, rax
     pop     rbx
     ret
-    
+
 string_proc_list_add_node_asm:
     push    rbx
     mov     rbx, rdi           
