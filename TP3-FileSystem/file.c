@@ -1,32 +1,19 @@
 // file.c
 #include <stdint.h>
 #include <string.h>
-#include "diskimg.h"
-#include "inode.h"
-#include "file.h"
-#include "unixfilesystem.h"
+#include "diskimg.h"         // diskimg_blockread, DISKIMG_SECTOR_SIZE
+#include "inode.h"           // inode_indexlookup, inode_getsize
+#include "file.h"            // declara file_getblock, forward de struct file
+#include "unixfilesystem.h"  // struct unixfilesystem
 
-// Tu definición privada de struct file
+// --- DEFINICIÓN PRIVADA de struct file, sólo en este .c ---
 struct file {
-    struct unixfilesystem *f_fs;
+    struct unixfilesystem *f_fs;  // opcional, según tu file_open
     struct inode          f_inode;
+    // int32_t               f_pos;  // si querés llevar posición
 };
 
-/**
- * Inicializa el objeto 'struct file' para que luego file_getblock
- * pueda usar f->f_inode.
- */
-int file_open(struct unixfilesystem *fs,
-              struct inode        *inp,
-              struct file         *f)
-{
-    f->f_fs    = fs;
-    f->f_inode = *inp;
-    return 0;
-}
-
-/* ---------------- tu file_getblock va aquí, exacto como lo tienes ahora --------------- */
-
+// Ahora sí el compilador sabe qué es f->f_inode:
 int file_getblock(struct unixfilesystem *fs,
                   struct file *f,
                   int32_t blockNum,
@@ -34,18 +21,26 @@ int file_getblock(struct unixfilesystem *fs,
 {
     // 1) Traducir bloque lógico → físico
     int phys = inode_indexlookup(fs, &f->f_inode, blockNum);
-    if (phys <= 0) return 0;
+    if (phys <= 0) {
+        // bloque fuera de rango o no asignado
+        return 0;
+    }
 
     // 2) Leer sector
     int n = diskimg_blockread(fs->dfd, phys, buf);
-    if (n < 0) return -1;
+    if (n < 0) {
+        // error I/O
+        return -1;
+    }
 
     // 3) Calcular bytes válidos
-    int size     = inode_getsize(&f->f_inode);
-    int fullBlks = size / DISKIMG_SECTOR_SIZE;
+    int64_t size      = inode_getsize(&f->f_inode);
+    int    fullBlks   = size / DISKIMG_SECTOR_SIZE;
     if (blockNum < fullBlks) {
+        // bloque completo
         return DISKIMG_SECTOR_SIZE;
     } else {
+        // bloque final (parcial o completo si exacto)
         int rem = size - fullBlks * DISKIMG_SECTOR_SIZE;
         return (rem > 0 ? rem : DISKIMG_SECTOR_SIZE);
     }
