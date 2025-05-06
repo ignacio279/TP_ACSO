@@ -1,7 +1,5 @@
-// file.c
-#include <stdint.h>
 #include <string.h>
-#include "diskimg.h"         // diskimg_blockread, DISKIMG_SECTOR_SIZE
+#include "diskimg.h"         // diskimg_readsector, DISKIMG_SECTOR_SIZE
 #include "inode.h"           // inode_iget, inode_indexlookup, inode_getsize
 #include "file.h"            // declara file_getblock
 #include "unixfilesystem.h"  // struct unixfilesystem
@@ -20,24 +18,21 @@ int file_getblock(struct unixfilesystem *fs,
     // 2) Traduce bloque lógico → físico
     int phys = inode_indexlookup(fs, &inp, blockNo);
     if (phys <= 0) {
-        // fuera de rango o no existe
         return 0;
     }
 
     // 3) Lee el sector completo
-    int n = diskimg_blockread(fs->dfd, phys, buf);
+    int n = diskimg_readsector(fs->dfd, phys, buf);
     if (n < 0) {
         return -1;
     }
 
     // 4) Calcula cuántos bytes son válidos
-    int size      = inode_getsize(&inp);
-    int fullBlks  = size / DISKIMG_SECTOR_SIZE;
+    int size     = inode_getsize(&inp);
+    int fullBlks = size / DISKIMG_SECTOR_SIZE;
     if (blockNo < fullBlks) {
-        // bloque intermedio entero
         return DISKIMG_SECTOR_SIZE;
     } else {
-        // último bloque (puede ser parcial)
         int rem = size - fullBlks * DISKIMG_SECTOR_SIZE;
         return (rem > 0 ? rem : DISKIMG_SECTOR_SIZE);
     }
