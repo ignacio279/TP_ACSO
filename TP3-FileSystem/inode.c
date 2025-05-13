@@ -1,8 +1,8 @@
-#include <string.h>             // memcpy
-#include "diskimg.h"            // diskimg_readsector, DISKIMG_SECTOR_SIZE
-#include "inode.h"              // struct inode
-#include "unixfilesystem.h"     // struct unixfilesystem, INODE_START_SECTOR
-#include "direntv6.h"           // para el typedef de addr_t implícito
+#include <string.h>            
+#include "diskimg.h"           
+#include "inode.h"              
+#include "unixfilesystem.h"    
+#include "direntv6.h"           
 
 int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
     int inodes_per_block = DISKIMG_SECTOR_SIZE / sizeof(struct inode);
@@ -34,13 +34,11 @@ int inode_indexlookup(struct unixfilesystem *fs,
     int perblk = DISKIMG_SECTOR_SIZE / sizeof(addr_t);
     char buf[DISKIMG_SECTOR_SIZE];
 
-    // Small file: punteros directos
     if ((inp->i_mode & ILARG) == 0) {
         if (blockNum < naddr) return inp->i_addr[blockNum];
         return 0;
     }
 
-    // Large file: indirectos simples en [0..naddr-2], doble indirecto en [naddr-1]
     int simple_limit = (naddr - 1) * perblk;
     if (blockNum < simple_limit) {
         int which  = blockNum / perblk;
@@ -53,7 +51,6 @@ int inode_indexlookup(struct unixfilesystem *fs,
         return arr[offset];
     }
 
-    // Doble indirecto
     int rem   = blockNum - simple_limit;
     int idx1  = rem / perblk;
     int idx2  = rem % perblk;
