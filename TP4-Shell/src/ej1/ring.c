@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
 
     int n = atoi(argv[1]);
     int val = atoi(argv[2]);
-    int start = atoi(argv[3]) - 1;  
+    int start = atoi(argv[3]) - 1;  // Convertir al índice base 0
 
     int pipes[n][2];
     for (int i = 0; i < n; i++) pipe(pipes[i]);
@@ -43,12 +43,14 @@ int main(int argc, char *argv[]) {
     write(pipes[start][1], &val, sizeof(val));
 
     int result;
-    close(pipes[start][1]);
-    read(pipes[start][0], &result, sizeof(result));
+    // El padre debe leer del pipe del proceso que terminó el ciclo
+    int last = (start - 1 + n) % n;  // El último proceso que pasó el valor
+    close(pipes[last][1]);
+    read(pipes[last][0], &result, sizeof(result));
 
     printf("Resultado final: %d\n", result);
 
-    for (int i = 0; i < n; i++) wait(NULL);
+    for (int i = 0; i < n; i++) wait(NULL); // Esperar a que todos los hijos terminen
 
     return 0;
 }
