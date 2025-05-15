@@ -16,7 +16,6 @@ int main(int argc, char **argv){
         fprintf(stderr, "Error: n>=3 y 1<=s<=n\n");
         exit(EXIT_FAILURE);
     }
-
     int pipes[n][2];
     for(int i = 0; i < n; i++)
         if(pipe(pipes[i]) < 0){ perror("pipe"); exit(EXIT_FAILURE); }
@@ -28,7 +27,6 @@ int main(int argc, char **argv){
         } else if(pid == 0){
             int idx  = i;
             int pred = (idx - 1 + n) % n;
-            // cerrar fds que no voy a usar
             for(int j = 0; j < n; j++){
                 if(j == idx)        close(pipes[j][0]);
                 else if(j == pred)  close(pipes[j][1]);
@@ -39,14 +37,11 @@ int main(int argc, char **argv){
             }
             int val;
             if(idx == s - 1){
-                // inicio: recibo de padre y reenvío SIN incrementar
                 read (pipes[pred][0], &val, sizeof(val));
                 write(pipes[idx][1], &val, sizeof(val));
-                // al final: vuelvo a recibir del último hijo y muestro
                 read (pipes[pred][0], &val, sizeof(val));
                 printf("Hijo %d: Leyó valor %d\n", idx+1, val);
             } else {
-                // resto de hijos: recibo, muestro, luego incremento y reenvío
                 read (pipes[pred][0], &val, sizeof(val));
                 printf("Hijo %d: Leyó valor %d\n", idx+1, val);
                 val++;
@@ -55,12 +50,9 @@ int main(int argc, char **argv){
             exit(EXIT_SUCCESS);
         }
     }
-
-    // padre
     int start_pipe = ( (s-1) - 1 + n ) % n;
     printf("Padre: Enviando valor %d al proceso %d\n", c, s);
     write(pipes[start_pipe][1], &c, sizeof(c));
-    // cerrar todo y esperar hijos
     for(int j = 0; j < n; j++){
         close(pipes[j][0]);
         close(pipes[j][1]);
