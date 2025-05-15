@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
 
     int n = atoi(argv[1]);
     int val = atoi(argv[2]);
-    int start = atoi(argv[3]) - 1;  // Convertir al índice base 0
+    int start = atoi(argv[3]) - 1;  
 
     int pipes[n][2];
     for (int i = 0; i < n; i++) pipe(pipes[i]);
@@ -21,35 +21,34 @@ int main(int argc, char *argv[]) {
         if (fork() == 0) {
             int prev = (i - 1 + n) % n;
             int next = i;
-            close(pipes[prev][1]); // Cerrar escritura del pipe anterior
-            close(pipes[next][0]); // Cerrar lectura del pipe siguiente
+            close(pipes[prev][1]);
+            close(pipes[next][0]);
 
             int x;
-            read(pipes[prev][0], &x, sizeof(x)); // Leer del pipe anterior
-            x += 1;  // Incrementar el valor
-            printf("Hijo %d: Leyó %d, Incrementado a %d\n", i + 1, x - 1, x);
-            write(pipes[next][1], &x, sizeof(x)); // Escribir en el siguiente pipe
+            read(pipes[prev][0], &x, sizeof(x));
+            printf("Hijo %d: Leyó valor %d\n", i + 1, x);
+            x += 1;
+            write(pipes[next][1], &x, sizeof(x));
 
-            close(pipes[prev][0]); // Cerrar lectura del pipe anterior
-            close(pipes[next][1]); // Cerrar escritura del pipe siguiente
+            close(pipes[prev][0]);
+            close(pipes[next][1]);
             exit(0);
         }
     }
 
-    // Código del padre
     close(pipes[start][0]);
     for (int i = 0; i < n; i++) if (i != start) close(pipes[i][0]);
 
     printf("Padre: Enviando valor %d al proceso %d\n", val, start + 1);
-    write(pipes[start][1], &val, sizeof(val)); // Enviar valor inicial
+    write(pipes[start][1], &val, sizeof(val));
 
     int result;
     close(pipes[start][1]);
-    read(pipes[start][0], &result, sizeof(result)); // Leer el resultado final
+    read(pipes[start][0], &result, sizeof(result));
 
     printf("Resultado final: %d\n", result);
 
-    for (int i = 0; i < n; i++) wait(NULL); // Esperar a que todos los hijos terminen
+    for (int i = 0; i < n; i++) wait(NULL);
 
     return 0;
 }
