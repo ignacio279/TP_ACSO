@@ -10,47 +10,93 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    int n = atoi(argv[1]);
-    int val = atoi(argv[2]);
-    int start = atoi(argv[3]) - 1;  // Convertir a índice base 0
+    int n     = atoi(argv[1]);
+    int val   = atoi(argv[2]);
+    int start = atoi(argv[3]) - 1;  // convertir a índice base 0
 
+    if (n < 1 || start < 0 || start >= n) {
+        fprintf(stderr, "Parámetros inválidos\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Creamos los n pipes
     int pipes[n][2];
-    for (int i = 0; i < n; i++) pipe(pipes[i]);
-
     for (int i = 0; i < n; i++) {
-        if (fork() == 0) {
-            int prev = (i - 1 + n) % n;
-            int next = i;
-            close(pipes[prev][1]);  // Cerrar escritura del pipe anterior
-            close(pipes[next][0]);  // Cerrar lectura del pipe siguiente
-
-            int x;
-            read(pipes[prev][0], &x, sizeof(x));  // Leer del proceso anterior
-            printf("Hijo %d: Leyó valor %d\n", i + 1, x);
-            x += 1;  // Incrementar el valor
-            write(pipes[next][1], &x, sizeof(x));  // Escribir en el siguiente proceso
-
-            close(pipes[prev][0]);  // Cerrar lectura del pipe anterior
-            close(pipes[next][1]);  // Cerrar escritura del pipe siguiente
-            exit(0);
+        if (pipe(pipes[i]) < 0) {
+            perror("pipe");
+            exit(EXIT_FAILURE);
         }
     }
 
-    close(pipes[start][0]);  // Cerrar lectura del pipe de inicio
-    for (int i = 0; i < n; i++) if (i != start) close(pipes[i][0]);  // Cerrar pipes que no se usan
+    // Fork de cada hijo
+    for (int i = 0; i < n; i++) {
+        pid_t pid = fork();
+        if (pid < 0) {
+            perror("fork");
+            exit(EXIT_FAILURE);
+        }
+        if (pid == 0) {
+            // Código del hijo i
+            int prev = (i - 1 + n) % n;
+            int next = i;
 
-    printf("Padre: Enviando valor %d al proceso %d\n", val, start + 1);
-    write(pipes[start][1], &val, sizeof(val));  // Enviar valor inicial al proceso de inicio
+            // Cerrar todos los extremos que no usamos
+            for (int j = 0; j < n; j++) {
+                if (j != prev) close(pipes[j][0]);  // sólo dejamos abierto pipes[prev][0]
+                if (j != next) close(pipes[j][1]);  // sólo dejamos abierto pipes[next][1]
+            }
 
+            // Leer, mostrar, incrementar y reenviar
+            int x;
+            if (read(pipes[prev][0], &x, sizeof(x)) != sizeof(x)) {
+                perror("read hijo");
+                exit(EXIT_FAILURE);
+            }
+            printf("Hijo %d: leyó %d\n", i + 1, x);
+            x++;
+            if (write(pipes[next][1], &x, sizeof(x)) != sizeof(x)) {
+                perror("write hijo");
+                exit(EXIT_FAILURE);
+            }
+
+            // Cerramos y salimos
+            close(pipes[prev][0]);
+            close(pipes[next][1]);
+            exit(EXIT_SUCCESS);
+        }
+        // el padre continúa al siguiente fork()
+    }
+
+    // Código del padre
+    int prev = (start - 1 + n) % n;
+
+    // Cerrar todos los fds salvo los de pipes[prev]
+    for (int j = 0; j < n; j++) {
+        if (j != prev) {
+            close(pipes[j][0]);
+            close(pipes[j][1]);
+        }
+    }
+
+    // Inyectar el valor inicial
+    printf("Padre: enviando valor %d al proceso %d\n", val, start + 1);
+    if (write(pipes[prev][1], &val, sizeof(val)) != sizeof(val)) {
+        perror("write padre");
+        exit(EXIT_FAILURE);
+    }
+
+    // Leer el resultado final
     int result;
-    // El padre debe leer del pipe del último proceso que completó el ciclo
-    int last = (start + n - 1) % n;  // Último proceso que pasó el valor
-    close(pipes[last][1]);  // Cerrar escritura en el último pipe
-    read(pipes[last][0], &result, sizeof(result));  // Leer el resultado final
+    if (read(pipes[prev][0], &result, sizeof(result)) != sizeof(result)) {
+        perror("read padre");
+        exit(EXIT_FAILURE);
+    }
+    printf("Resultado final: %d\n", result);
 
-    printf("Resultado final: %d\n", result);  // Imprimir el resultado final
-
-    for (int i = 0; i < n; i++) wait(NULL);  // Esperar que todos los hijos terminen
+    // Esperar a todos los hijos
+    for (int i = 0; i < n; i++) {
+        wait(NULL);
+    }
 
     return 0;
 }
