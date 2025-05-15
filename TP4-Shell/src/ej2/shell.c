@@ -5,43 +5,98 @@
 #include <string.h>
 
 #define MAX_COMMANDS 200
+#define MAX_ARGS     200
 
 int main() {
-
-    char command[256];
+    char line[1024];
     char *commands[MAX_COMMANDS];
-    int command_count = 0;
+    int pipefds[2 * (MAX_COMMANDS - 1)];
 
-    while (1) 
-    {
+    while (1) {
+        // 1) Mostrar prompt y leer línea
         printf("Shell> ");
-        
-        /*Reads a line of input from the user from the standard input (stdin) and stores it in the variable command */
-        fgets(command, sizeof(command), stdin);
-        
-        /* Removes the newline character (\n) from the end of the string stored in command, if present. 
-           This is done by replacing the newline character with the null character ('\0').
-           The strcspn() function returns the length of the initial segment of command that consists of 
-           characters not in the string specified in the second argument ("\n" in this case). */
-        command[strcspn(command, "\n")] = '\0';
+        if (!fgets(line, sizeof(line), stdin)) {
+            // EOF (Ctrl-D)
+            putchar('\n');
+            break;
+        }
+        line[strcspn(line, "\n")] = '\0';
+        if (line[0] == '\0') continue;
 
-        /* Tokenizes the command string using the pipe character (|) as a delimiter using the strtok() function. 
-           Each resulting token is stored in the commands[] array. 
-           The strtok() function breaks the command string into tokens (substrings) separated by the pipe character |. 
-           In each iteration of the while loop, strtok() returns the next token found in command. 
-           The tokens are stored in the commands[] array, and command_count is incremented to keep track of the number of tokens found. */
-        char *token = strtok(command, "|");
-        while (token != NULL) 
-        {
-            commands[command_count++] = token;
-            token = strtok(NULL, "|");
+        // 2) Separar en comandos por '|'
+        int ncmds = 0;
+        char *cmd = strtok(line, "|");
+        while (cmd && ncmds < MAX_COMMANDS) {
+            // recortar espacios al inicio
+            while (*cmd == ' ' || *cmd == '\t') cmd++;
+            commands[ncmds++] = cmd;
+            cmd = strtok(NULL, "|");
         }
 
-        /* You should start programming from here... */
-        for (int i = 0; i < command_count; i++) 
-        {
-            printf("Command %d: %s\n", i, commands[i]);
-        }    
+        if (ncmds == 0) continue;
+
+        // 3) Crear todos los pipes necesarios
+        for (int i = 0; i < ncmds - 1; i++) {
+            if (pipe(pipefds + 2*i) < 0) {
+                perror("pipe");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        // 4) Para cada comando, fork + setup de pipes + exec
+        for (int i = 0; i < ncmds; i++) {
+            pid_t pid = fork();
+            if (pid < 0) {
+                perror("fork");
+                exit(EXIT_FAILURE);
+            }
+            if (pid == 0) {
+                // --- en hijo ---
+                // 4a) Si no es el primer comando, dup2 lectura del pipe previo a stdin
+                if (i > 0) {
+                    if (dup2(pipefds[2*(i-1)], STDIN_FILENO) < 0) {
+                        perror("dup2 stdin");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                // 4b) Si no es el último comando, dup2 escritura del pipe actual a stdout
+                if (i < ncmds - 1) {
+                    if (dup2(pipefds[2*i + 1], STDOUT_FILENO) < 0) {
+                        perror("dup2 stdout");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                // 4c) Cerrar todos los fds de pipes en el hijo
+                for (int j = 0; j < 2*(ncmds - 1); j++) {
+                    close(pipefds[j]);
+                }
+                // 4d) Preparar argv para execvp (tokenizar por espacios)
+                char *argv[MAX_ARGS];
+                int argc = 0;
+                char *arg = strtok(commands[i], " \t");
+                while (arg && argc < MAX_ARGS-1) {
+                    argv[argc++] = arg;
+                    arg = strtok(NULL, " \t");
+                }
+                argv[argc] = NULL;
+                if (argc == 0) exit(EXIT_SUCCESS);
+
+                // 4e) Ejecutar
+                execvp(argv[0], argv);
+                perror("execvp");
+                exit(EXIT_FAILURE);
+            }
+            // --- en padre: seguimos creando hijos ---
+        }
+
+        // 5) En padre: cerrar pipes y esperar a todos los hijos
+        for (int i = 0; i < 2*(ncmds - 1); i++) {
+            close(pipefds[i]);
+        }
+        for (int i = 0; i < ncmds; i++) {
+            wait(NULL);
+        }
     }
+
     return 0;
 }
