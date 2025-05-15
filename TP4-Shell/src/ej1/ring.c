@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
-
 int main(int argc, char **argv){
     if(argc != 4){
         fprintf(stderr, "Uso: %s <n> <c> <s>\n", argv[0]);
@@ -59,6 +58,5 @@ int main(int argc, char **argv){
     }
     for(int j = 0; j < n; j++)
         wait(NULL);
-
     return 0;
 }
