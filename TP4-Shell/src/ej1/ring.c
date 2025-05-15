@@ -1,62 +1,71 @@
+#include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
 
-int main(int argc, char *argv[]) {
-    if (argc != 4) {
+int main(int argc, char **argv){
+    if(argc != 4){
         fprintf(stderr, "Uso: %s <n> <c> <s>\n", argv[0]);
-        return 1;
+        exit(EXIT_FAILURE);
     }
-    int n     = atoi(argv[1]);
-    int val   = atoi(argv[2]);
-    int start = atoi(argv[3]) - 1;  // base 0
-    if (n < 1 || start < 0 || start >= n) {
-        fprintf(stderr, "Parámetros inválidos\n");
-        return 1;
+    int n = atoi(argv[1]);
+    int c = atoi(argv[2]);
+    int s = atoi(argv[3]);
+    if(n < 3 || s < 1 || s > n){
+        fprintf(stderr, "Error: n>=3 y 1<=s<=n\n");
+        exit(EXIT_FAILURE);
     }
 
-    int p[n][2];
-    for (int i = 0; i < n; i++)
-        if (pipe(p[i]) < 0) { perror("pipe"); return 1; }
+    int pipes[n][2];
+    for(int i = 0; i < n; i++)
+        if(pipe(pipes[i]) < 0){ perror("pipe"); exit(EXIT_FAILURE); }
 
-    for (int i = 0; i < n; i++) {
-        if (fork() == 0) {
-            int prev = (i - 1 + n) % n, next = i;
-            // cierro todo menos p[prev][0] y p[next][1]
-            for (int j = 0; j < n; j++) {
-                if (j != prev) close(p[j][0]);
-                if (j != next) close(p[j][1]);
+    for(int i = 0; i < n; i++){
+        pid_t pid = fork();
+        if(pid < 0){
+            perror("fork"); exit(EXIT_FAILURE);
+        } else if(pid == 0){
+            int idx  = i;
+            int pred = (idx - 1 + n) % n;
+            // cerrar fds que no voy a usar
+            for(int j = 0; j < n; j++){
+                if(j == idx)        close(pipes[j][0]);
+                else if(j == pred)  close(pipes[j][1]);
+                else{
+                    close(pipes[j][0]);
+                    close(pipes[j][1]);
+                }
             }
-            int x;
-            read(p[prev][0], &x, sizeof(x));
-            printf("Hijo %d: leyó %d\n", i+1, x);
-            x++;
-            write(p[next][1], &x, sizeof(x));
-            close(p[prev][0]);
-            close(p[next][1]);
-            exit(0);
+            int val;
+            if(idx == s - 1){
+                // inicio: recibo de padre y reenvío SIN incrementar
+                read (pipes[pred][0], &val, sizeof(val));
+                write(pipes[idx][1], &val, sizeof(val));
+                // al final: vuelvo a recibir del último hijo y muestro
+                read (pipes[pred][0], &val, sizeof(val));
+                printf("Hijo %d: Leyó valor %d\n", idx+1, val);
+            } else {
+                // resto de hijos: recibo, muestro, luego incremento y reenvío
+                read (pipes[pred][0], &val, sizeof(val));
+                printf("Hijo %d: Leyó valor %d\n", idx+1, val);
+                val++;
+                write(pipes[idx][1], &val, sizeof(val));
+            }
+            exit(EXIT_SUCCESS);
         }
     }
 
     // padre
-    int entry = (start - 1 + n) % n;
-    for (int i = 0; i < n; i++) {
-        if (i != entry) {
-            close(p[i][0]);
-            close(p[i][1]);
-        }
+    int start_pipe = ( (s-1) - 1 + n ) % n;
+    printf("Padre: Enviando valor %d al proceso %d\n", c, s);
+    write(pipes[start_pipe][1], &c, sizeof(c));
+    // cerrar todo y esperar hijos
+    for(int j = 0; j < n; j++){
+        close(pipes[j][0]);
+        close(pipes[j][1]);
     }
-
-    printf("Padre: enviando valor %d al proceso %d\n", val, start+1);
-    write(p[entry][1], &val, sizeof(val));
-    close(p[entry][1]);            // cierro escritura para que read acabe
-    int result;
-    read(p[entry][0], &result, sizeof(result));
-    printf("Resultado final: %d\n", result);
-    close(p[entry][0]);
-
-    for (int i = 0; i < n; i++)  // reapear hijos
+    for(int j = 0; j < n; j++)
         wait(NULL);
 
     return 0;
