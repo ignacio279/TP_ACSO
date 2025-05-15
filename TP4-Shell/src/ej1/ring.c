@@ -19,7 +19,6 @@ int main(int argc, char **argv) {
     printf("Se crearán %d procesos, se enviará el valor %d desde proceso %d\n",
            n, valor, start);
 
-    // 1) Crear pipes
     int pipes[n][2];
     for (int i = 0; i < n; i++) {
         if (pipe(pipes[i]) < 0) {
@@ -28,7 +27,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    // 2) Fork hijos
     pid_t pid;
     int i;
     for (i = 0; i < n; i++) {
@@ -38,11 +36,9 @@ int main(int argc, char **argv) {
             exit(EXIT_FAILURE);
         }
         if (pid == 0) {
-            // ¡hijo i!
             int idx = i;
             int read_fd  = pipes[(idx - 1 + n) % n][0];
             int write_fd = pipes[idx][1];
-            // cerrar fds no usados
             for (int j = 0; j < n; j++) {
                 if (pipes[j][0] != read_fd)  close(pipes[j][0]);
                 if (pipes[j][1] != write_fd) close(pipes[j][1]);
@@ -61,36 +57,30 @@ int main(int argc, char **argv) {
             close(write_fd);
             exit(EXIT_SUCCESS);
         }
-        // si soy padre, continúo creando más hijos
     }
 
-    // 3) Código del padre
     int start_idx = start - 1;
-    int wfd = pipes[start_idx][1];
-    int rfd = pipes[start_idx][0];
-    // cerrar pipes no usados
+    int prev      = (start_idx - 1 + n) % n;
+    int wfd       = pipes[prev][1];
+    int rfd       = pipes[prev][0];
     for (int j = 0; j < n; j++) {
-        if (j != start_idx) {
+        if (j != prev) {
             close(pipes[j][0]);
             close(pipes[j][1]);
         }
     }
-    // iniciar anillo
     if (write(wfd, &valor, sizeof(valor)) != sizeof(valor)) {
         perror("write padre");
         exit(EXIT_FAILURE);
     }
-    // leer resultado final
     int resultado;
     if (read(rfd, &resultado, sizeof(resultado)) != sizeof(resultado)) {
         perror("read padre");
         exit(EXIT_FAILURE);
     }
     printf("Resultado final: %d\n", resultado);
-
     close(wfd);
     close(rfd);
-    // esperar hijos
     for (int j = 0; j < n; j++) {
         wait(NULL);
     }
