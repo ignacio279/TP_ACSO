@@ -28,15 +28,14 @@ int main(int argc, char **argv) {
     }
 
     pid_t pid;
-    int i;
-    for (i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         pid = fork();
         if (pid < 0) {
             perror("fork");
             exit(EXIT_FAILURE);
         }
         if (pid == 0) {
-            int idx = i;
+            int idx      = i;
             int read_fd  = pipes[(idx - 1 + n) % n][0];
             int write_fd = pipes[idx][1];
             for (int j = 0; j < n; j++) {
