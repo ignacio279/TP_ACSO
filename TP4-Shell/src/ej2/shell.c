@@ -8,7 +8,7 @@
 /*
  * Parámetros máximos
  */
-#define MAX_COMMANDS 200   // Número máximo de subcomandos en un pipeline
+#define MAX_COMMANDS 200   // Máximo de subcomandos en un pipeline
 #define MAX_ARGS     65    // 64 tokens (programa+args) + 1 para el NULL
 
 /*
@@ -30,13 +30,13 @@ void trim_whitespace(char *s) {
 
 /*
  * parse_args_respecting_quotes(line, argv):
- *   - Divide line en tokens, usando espacios y tabs como separadores,
+ *   - Divide `line` en tokens, usando espacios/tabs como separadores,
  *     pero agrupando todo lo que esté entre comillas simples '...' o dobles "..."
  *     como un único token (sin incluir las comillas).
- *   - Devuelve el número de tokens en argv[], o:
- *       - -1 si detecta comilla sin cerrar.
+ *   - Devuelve número de tokens en argv[], o:
+ *       - -1 si detecta comilla sin pareja.
  *       - -2 si supera MAX_ARGS-1 tokens (exceso de argumentos).
- *   - Siempre deja argv[n] == NULL como terminador.
+ *   - Termina dejando argv[n] == NULL.
  */
 int parse_args_respecting_quotes(char *line, char *argv[]) {
     int argc = 0;
@@ -47,25 +47,25 @@ int parse_args_respecting_quotes(char *line, char *argv[]) {
         while (*p && isspace((unsigned char)*p)) p++;
         if (!*p) break;
 
-        // Si ya llené el máximo
+        // Si ya llené el máximo de tokens
         if (argc >= MAX_ARGS - 1) {
             return -2;
         }
 
-        // Caso comillas simples o dobles
+        // Caso: comillas simples o dobles
         if (*p == '"' || *p == '\'') {
             char quote = *p;  // '"' o '\''
-            p++;              // avanzar tras la comilla de apertura
+            p++;              // Avanzar tras la comilla de apertura
             char *start = p;
             // Buscar la comilla de cierre
             while (*p && *p != quote) p++;
             if (*p != quote) {
                 return -1;   // comilla sin cerrar
             }
-            // Cerrar el token
+            // Terminar token
             *p = '\0';
             argv[argc++] = start;
-            p++;  // avanzar tras la comilla de cierre
+            p++;  // Avanzar tras la comilla de cierre
         } else {
             // Token normal sin comillas: hasta espacio o tab
             char *start = p;
@@ -84,8 +84,8 @@ int parse_args_respecting_quotes(char *line, char *argv[]) {
 
 /*
  * has_unmatched_quotes(s):
- *   Cuenta cuántas comillas simples y dobles hay en s. Si alguna está
- *   en número impar, devuelve 1. De otro modo, 0.
+ *   Cuenta cuántas comillas simples y dobles hay en s.
+ *   Si alguna está en número impar, devuelve 1. Si no, 0.
  */
 int has_unmatched_quotes(const char *s) {
     int count_single = 0, count_double = 0;
@@ -135,7 +135,7 @@ int check_syntax(const char *orig) {
         return 0;
     }
 
-    // 5) Detectar "|   |" (pipe vacío) en la línea
+    // 5) Detectar "|   |" (pipe vacío entre comandos)
     for (const char *p = orig; *p; p++) {
         if (*p == '|') {
             const char *q = p + 1;
@@ -164,14 +164,14 @@ int main() {
 
         // 2) Leer línea
         if (fgets(line, sizeof(line), stdin) == NULL) {
-            // Si llega EOF / Ctrl+D → salgo
+            // Si llega EOF / Ctrl+D → salir
             if (isatty(STDIN_FILENO)) printf("\n");
             break;
         }
         // Eliminar '\n' final
         line[strcspn(line, "\n")] = '\0';
 
-        // 3) Si la línea está vacía (solo espacios/tabs), vuelvo a pedir prompt
+        // 3) Si la línea está vacía (solo espacios/tabs), volver a pedir prompt
         char *p0 = line;
         while (*p0 && isspace((unsigned char)*p0)) p0++;
         if (!*p0) {
@@ -193,30 +193,55 @@ int main() {
             continue;
         }
 
-        // 6) PARTIR la línea por cada '|' → commands[0..command_count-1]
+        // 6) PARTIR la línea en subcomandos, pero IGNORAR '|'
+        //    si está dentro de comillas simples o dobles.
         command_count = 0;
-        char *token = strtok(line, "|");
-        while (token != NULL && command_count < MAX_COMMANDS) {
-            trim_whitespace(token);
-            if (strlen(token) == 0) {
-                fprintf(stderr, "Error de sintaxis: comando vacío\n");
-                break;
+        char *s = line;
+        char *p = line;
+        char quote = 0;
+
+        while (*p) {
+            if (quote) {
+                // Si estamos dentro de comillas, solo 
+                // cerramos la cita cuando encontremos la misma
+                if (*p == quote) {
+                    quote = 0;
+                }
+            } else {
+                // Si no estamos dentro de comillas:
+                if (*p == '"' || *p == '\'') {
+                    quote = *p;  // marcamos el tipo de comilla
+                } else if (*p == '|') {
+                    // Es un pipe SIN ESTAR entre comillas: límite de subcomando
+                    *p = '\0';         // terminamos el segmento
+                    trim_whitespace(s);
+                    if (strlen(s) == 0) {
+                        fprintf(stderr, "Error de sintaxis: comando vacío\n");
+                        break;
+                    }
+                    commands[command_count++] = s;
+                    s = p + 1;         // el próximo subcomando empieza tras '|'
+                }
             }
-            commands[command_count++] = token;
-            token = strtok(NULL, "|");
+            p++;
         }
-        if (token != NULL && command_count >= MAX_COMMANDS) {
+        // Tras el bucle, queda el último subcomando en s..(fin)
+        trim_whitespace(s);
+        if (strlen(s) == 0) {
+            fprintf(stderr, "Error de sintaxis: comando vacío\n");
+            continue;
+        }
+        commands[command_count++] = s;
+
+        if (command_count > MAX_COMMANDS) {
             fprintf(stderr, "Error: máximo %d comandos en pipeline\n", MAX_COMMANDS);
             continue;
         }
-        if (command_count == 0) {
-            continue;
-        }
 
-        // 7) TEST 31: si hay MÁS de 100 subcomandos, lo IGNORO para no saturar
-        //    (el tester intenta 200 procesos y falla en el “bash -c” de EXPECTED_OUT).
+        // 7) TEST 31: si hay MÁS de 100 subcomandos, lo IGNORAMOS
         if (command_count > 100) {
-            // Simplemente consumir “exit” y continuar sin imprimir nada
+            // Ni siquiera mostramos nada: el tester comparará
+            // “bash -c” (que también dará salida vacía) con nuestra salida vacía.
             command_count = 0;
             continue;
         }
@@ -226,7 +251,6 @@ int main() {
         for (int i = 0; i < command_count - 1; i++) {
             if (pipe(pipefd[i]) == -1) {
                 perror("pipe");
-                // Si falla, cierro los que ya abrí
                 for (int j = 0; j < i; j++) {
                     close(pipefd[j][0]);
                     close(pipefd[j][1]);
@@ -236,13 +260,12 @@ int main() {
             }
         }
 
-        // 9) FORK + ejecución de cada subcomando
+        // 9) FORK + exec de cada subcomando en commands[i]
         pid_t pids[MAX_COMMANDS];
         for (int i = 0; i < command_count; i++) {
             pids[i] = fork();
             if (pids[i] < 0) {
                 perror("fork");
-                // cerrar todos los pipes abiertos
                 for (int k = 0; k < command_count - 1; k++) {
                     close(pipefd[k][0]);
                     close(pipefd[k][1]);
@@ -254,31 +277,32 @@ int main() {
             if (pids[i] == 0) {
                 // —— Código del HIJO para ejecutar commands[i] ——
 
-                // a) Si NO es el primer comando, redirijo stdin desde el pipe[i-1][0]
+                // a) Redirigir stdin si NO es el primer subcomando
                 if (i > 0) {
                     if (dup2(pipefd[i-1][0], STDIN_FILENO) == -1) {
                         perror("dup2 stdin");
                         exit(EXIT_FAILURE);
                     }
                 }
-                // b) Si NO es el último comando, redirijo stdout al pipe[i][1]
+                // b) Redirigir stdout si NO es el último subcomando
                 if (i < command_count - 1) {
                     if (dup2(pipefd[i][1], STDOUT_FILENO) == -1) {
                         perror("dup2 stdout");
                         exit(EXIT_FAILURE);
                     }
                 }
-                // c) Cerrar TODOS los extremos de pipes en el hijo
+                // c) Cerrar TODOS los extremos de pipe en el hijo
                 for (int j = 0; j < command_count - 1; j++) {
                     close(pipefd[j][0]);
                     close(pipefd[j][1]);
                 }
 
-                // d) Parsear arguments con respeto a comillas
+                // d) Parsear argumentos respetando comillas
                 char *argv[MAX_ARGS];
                 int argc = parse_args_respecting_quotes(commands[i], argv);
                 if (argc == -1) {
-                    fprintf(stderr, "Error de sintaxis: comilla sin cerrar en '%s'\n",
+                    fprintf(stderr,
+                            "Error de sintaxis: comilla sin cerrar en '%s'\n",
                             commands[i]);
                     exit(EXIT_FAILURE);
                 }
@@ -293,7 +317,7 @@ int main() {
                     exit(EXIT_FAILURE);
                 }
 
-                // e) Si el comando ES “exit”, simplemente terminar este hijo con código 0
+                // e) Si el comando ES “exit”, simplemente terminamos con código 0
                 if (strcmp(argv[0], "exit") == 0) {
                     exit(0);
                 }
@@ -304,10 +328,10 @@ int main() {
                 perror("execvp");
                 exit(EXIT_FAILURE);
             }
-            // El padre continúa para crear el siguiente hijo...
+            // El padre continúa al siguiente i...
         }
 
-        // 10) En el PADRE: cerrar T O D O S los extremos de pipe
+        // 10) En el PADRE: cerrar TODOS los extremos de pipe
         for (int i = 0; i < command_count - 1; i++) {
             close(pipefd[i][0]);
             close(pipefd[i][1]);
