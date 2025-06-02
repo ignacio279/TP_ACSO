@@ -106,7 +106,7 @@ int main() {
         cmds[n++] = a;
 
         if (n > MAX_C) { fprintf(stderr, "Error: máximo %d comandos\n", MAX_C); continue; }
-        if (n > 100) { /* evitar saturar forks en pipelines muy largos */ continue; }
+        // <-- Aquí removimos el if (n > 100) -->
 
         // Crear pipes
         int fd[MAX_C - 1][2];
