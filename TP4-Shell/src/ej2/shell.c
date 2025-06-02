@@ -4,274 +4,165 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <ctype.h>
-#define MAX_COMMANDS 200  
-#define MAX_ARGS     65    
 
+#define MAX_C 200    // Máximo subcomandos en pipeline
+#define MAX_A 65     // 64 tokens + NULL
 
-void trim_whitespace(char *s) {
-    while (*s && ( *s == ' ' || *s == '\t' )) {
-        memmove(s, s + 1, strlen(s));
-    }
-    size_t len = strlen(s);
-    while (len > 0 && ( s[len-1] == ' ' || s[len-1] == '\t' )) {
-        s[len-1] = '\0';
-        len--;
-    }
-}
-
-int parse_args_respecting_quotes(char *line, char *argv[]) {
+// Parser de argumentos que respeta comillas simples y dobles.
+// Devuelve número de tokens, -1 si hay comilla sin cerrar, -2 si excede MAX_A-1.
+int parse_args(char *s, char **argv) {
     int argc = 0;
-    char *p = line;
-
+    char *p = s;
     while (*p) {
         while (*p && isspace((unsigned char)*p)) p++;
         if (!*p) break;
-
-        if (argc >= MAX_ARGS - 1) {
-            return -2;
-        }
-
+        if (argc >= MAX_A - 1) return -2;
         if (*p == '"' || *p == '\'') {
-            char quote = *p; 
-            p++;              
-            char *start = p;
-            while (*p && *p != quote) p++;
-            if (*p != quote) {
-                return -1;   
-            }
+            char q = *p; p++;
+            char *st = p;
+            while (*p && *p != q) p++;
+            if (*p != q) return -1;
             *p = '\0';
-            argv[argc++] = start;
-            p++; 
+            argv[argc++] = st;
+            p++;
         } else {
-            char *start = p;
+            char *st = p;
             while (*p && !isspace((unsigned char)*p)) p++;
-            if (*p) {
-                *p = '\0';
-                p++;
-            }
-            argv[argc++] = start;
+            if (*p) { *p = '\0'; p++; }
+            argv[argc++] = st;
         }
     }
-
     argv[argc] = NULL;
     return argc;
 }
 
-int has_unmatched_quotes(const char *s) {
-    int count_single = 0, count_double = 0;
-    for (; *s; s++) {
-        if (*s == '\'') count_single++;
-        if (*s == '"')  count_double++;
-    }
-    return (count_single % 2) || (count_double % 2);
-}
-
-int check_syntax(const char *orig) {
-    if (has_unmatched_quotes(orig)) {
-        fprintf(stderr, "Error de sintaxis: comillas sin cerrar\n");
-        return 0;
-    }
-
-    const char *start = orig;
-    while (*start && isspace((unsigned char)*start)) start++;
-    if (*start == '|') {
-        fprintf(stderr, "Error de sintaxis: pipe al inicio\n");
-        return 0;
-    }
-
-    const char *end = orig + strlen(orig) - 1;
-    while (end > orig && isspace((unsigned char)*end)) end--;
-    if (*end == '|') {
-        fprintf(stderr, "Error de sintaxis: pipe al final\n");
-        return 0;
-    }
-
-    if (strstr(orig, "||") != NULL) {
-        fprintf(stderr, "Error de sintaxis: '||' no permitido\n");
-        return 0;
-    }
-
-    for (const char *p = orig; *p; p++) {
-        if (*p == '|') {
-            const char *q = p + 1;
-            while (*q && isspace((unsigned char)*q)) q++;
-            if (*q == '|') {
-                fprintf(stderr, "Error de sintaxis: pipe vacío entre comandos\n");
-                return 0;
-            }
-        }
-    }
-
-    return 1;
-}
-
 int main() {
-    char line[4096];
-    char *commands[MAX_COMMANDS];
-    int command_count;
-
+    char line[4096], *cmds[MAX_C];
     while (1) {
-        if (isatty(STDIN_FILENO)) {
-            printf("Shell> ");
-            fflush(stdout);
-        }
-
-        if (fgets(line, sizeof(line), stdin) == NULL) {
-            if (isatty(STDIN_FILENO)) printf("\n");
+        if (isatty(0)) { printf("Shell> "); fflush(stdout); }
+        if (!fgets(line, sizeof(line), stdin)) {
+            if (isatty(0)) printf("\n");
             break;
         }
-        line[strcspn(line, "\n")] = '\0';
+        line[strcspn(line, "\n")] = 0;
 
-        char *p0 = line;
-        while (*p0 && isspace((unsigned char)*p0)) p0++;
-        if (!*p0) {
+        // Ignorar líneas vacías (solo espacios/tab)
+        char *t0 = line;
+        while (*t0 && isspace((unsigned char)*t0)) t0++;
+        if (!*t0) continue;
+
+        // Caso "exit" solo
+        char tmp[4096];
+        strcpy(tmp, line);
+        // trim(tmp)
+        char *r = tmp;
+        while (*r && isspace((unsigned char)*r)) r++;
+        char *e = r + strlen(r) - 1;
+        while (e > r && isspace((unsigned char)*e)) *e-- = 0;
+        if (strcmp(r, "exit") == 0) exit(0);
+
+        // Chequear sintaxis básica: comillas sin cerrar y pipes mal ubicados
+        int qc = 0, bad = 0;
+        for (char *p = line; *p; p++) {
+            if (*p == '"' || *p == '\'') qc++;
+            if (*p == '|' && !p[1]) { bad = 1; break; }
+            if (p[1] == '|' && (*p == '|' || isspace((unsigned char)p[-1]))) { bad = 1; break; }
+        }
+        if (bad || (qc % 2)) {
+            if (qc % 2) fprintf(stderr, "Error de sintaxis: comillas sin cerrar\n");
+            else        fprintf(stderr, "Error de sintaxis\n");
             continue;
         }
 
-        {
-            char tmp[4096];
-            strcpy(tmp, line);
-            trim_whitespace(tmp);
-            if (strcmp(tmp, "exit") == 0) {
-                exit(0);
-            }
-        }
-
-        if (!check_syntax(line)) {
-            continue;
-        }
-
-        command_count = 0;
-        char *s = line;
-        char *p = line;
+        // Split en subcomandos por '|' respetando comillas
+        int n = 0;
         char quote = 0;
-
-        while (*p) {
+        char *p = line, *start = line;
+        for (; *p; p++) {
             if (quote) {
-
-                if (*p == quote) {
-                    quote = 0;
-                }
+                if (*p == quote) quote = 0;
             } else {
-                if (*p == '"' || *p == '\'') {
-                    quote = *p;  
-                } else if (*p == '|') {
-                    *p = '\0';         
-                    trim_whitespace(s);
-                    if (strlen(s) == 0) {
-                        fprintf(stderr, "Error de sintaxis: comando vacío\n");
-                        break;
-                    }
-                    commands[command_count++] = s;
-                    s = p + 1;        
+                if (*p == '"' || *p == '\'') quote = *p;
+                else if (*p == '|') {
+                    *p = 0;
+                    // trim(start)
+                    char *a = start;
+                    while (*a && isspace((unsigned char)*a)) a++;
+                    char *b = a + strlen(a) - 1;
+                    while (b > a && isspace((unsigned char)*b)) *b-- = 0;
+                    if (!*a) { fprintf(stderr, "Error de sintaxis: comando vacío\n"); n = -1; break; }
+                    cmds[n++] = a;
+                    start = p + 1;
                 }
             }
-            p++;
         }
-        trim_whitespace(s);
-        if (strlen(s) == 0) {
-            fprintf(stderr, "Error de sintaxis: comando vacío\n");
-            continue;
-        }
-        commands[command_count++] = s;
+        if (n < 0) continue;
+        // último comando
+        char *a = start;
+        while (*a && isspace((unsigned char)*a)) a++;
+        char *b = a + strlen(a) - 1;
+        while (b > a && isspace((unsigned char)*b)) *b-- = 0;
+        if (!*a) { fprintf(stderr, "Error de sintaxis: comando vacío\n"); continue; }
+        cmds[n++] = a;
 
-        if (command_count > MAX_COMMANDS) {
-            fprintf(stderr, "Error: máximo %d comandos en pipeline\n", MAX_COMMANDS);
-            continue;
-        }
+        if (n > MAX_C) { fprintf(stderr, "Error: máximo %d comandos\n", MAX_C); continue; }
+        if (n > 100) { /* evitar saturar forks en pipelines muy largos */ continue; }
 
-        if (command_count > 100) {
-            command_count = 0;
-            continue;
-        }
-
-        int pipefd[MAX_COMMANDS - 1][2];
-        for (int i = 0; i < command_count - 1; i++) {
-            if (pipe(pipefd[i]) == -1) {
+        // Crear pipes
+        int fd[MAX_C - 1][2];
+        for (int i = 0; i < n - 1; i++) {
+            if (pipe(fd[i]) < 0) {
                 perror("pipe");
                 for (int j = 0; j < i; j++) {
-                    close(pipefd[j][0]);
-                    close(pipefd[j][1]);
+                    close(fd[j][0]); close(fd[j][1]);
                 }
-                command_count = 0;
-                goto fin_iter;
+                n = 0;
+                goto end_loop;
             }
         }
 
-        pid_t pids[MAX_COMMANDS];
-        for (int i = 0; i < command_count; i++) {
-            pids[i] = fork();
-            if (pids[i] < 0) {
+        // Fork + exec de cada subcomando
+        pid_t pid[MAX_C];
+        for (int i = 0; i < n; i++) {
+            if ((pid[i] = fork()) < 0) {
                 perror("fork");
-                for (int k = 0; k < command_count - 1; k++) {
-                    close(pipefd[k][0]);
-                    close(pipefd[k][1]);
+                for (int k = 0; k < n - 1; k++) {
+                    close(fd[k][0]); close(fd[k][1]);
                 }
-                command_count = 0;
-                goto fin_iter;
+                n = 0;
+                goto end_loop;
             }
-
-            if (pids[i] == 0) {
-
-                if (i > 0) {
-                    if (dup2(pipefd[i-1][0], STDIN_FILENO) == -1) {
-                        perror("dup2 stdin");
-                        exit(EXIT_FAILURE);
-                    }
+            if (pid[i] == 0) {
+                if (i > 0)  dup2(fd[i - 1][0], 0);
+                if (i < n - 1) dup2(fd[i][1], 1);
+                for (int j = 0; j < n - 1; j++) {
+                    close(fd[j][0]); close(fd[j][1]);
                 }
-                if (i < command_count - 1) {
-                    if (dup2(pipefd[i][1], STDOUT_FILENO) == -1) {
-                        perror("dup2 stdout");
-                        exit(EXIT_FAILURE);
-                    }
+                char *argv[MAX_A];
+                int argc = parse_args(cmds[i], argv);
+                if (argc < 0) {
+                    if (argc == -1) fprintf(stderr, "Error de sintaxis: comillas sin cerrar\n");
+                    else            fprintf(stderr, "Error: exceso de argumentos\n");
+                    exit(1);
                 }
-                for (int j = 0; j < command_count - 1; j++) {
-                    close(pipefd[j][0]);
-                    close(pipefd[j][1]);
-                }
-
-                char *argv[MAX_ARGS];
-                int argc = parse_args_respecting_quotes(commands[i], argv);
-                if (argc == -1) {
-                    fprintf(stderr,
-                            "Error de sintaxis: comilla sin cerrar en '%s'\n",
-                            commands[i]);
-                    exit(EXIT_FAILURE);
-                }
-                if (argc == -2) {
-                    fprintf(stderr,
-                            "Error: exceso de argumentos en '%s' (máximo %d)\n",
-                            commands[i], MAX_ARGS - 1);
-                    exit(EXIT_FAILURE);
-                }
-                if (argc == 0) {
-                    fprintf(stderr, "Error: comando vacío en posición %d\n", i);
-                    exit(EXIT_FAILURE);
-                }
-
-                if (strcmp(argv[0], "exit") == 0) {
-                    exit(0);
-                }
-
+                if (!strcmp(argv[0], "exit")) exit(0);
                 execvp(argv[0], argv);
                 perror("execvp");
-                exit(EXIT_FAILURE);
+                exit(1);
             }
         }
 
-        for (int i = 0; i < command_count - 1; i++) {
-            close(pipefd[i][0]);
-            close(pipefd[i][1]);
+        // Cerrar pipes en padre
+        for (int i = 0; i < n - 1; i++) {
+            close(fd[i][0]); close(fd[i][1]);
+        }
+        // Esperar hijos
+        for (int i = 0; i < n; i++) {
+            waitpid(pid[i], NULL, 0);
         }
 
-        for (int i = 0; i < command_count; i++) {
-            int status;
-            waitpid(pids[i], &status, 0);
-        }
-
-    fin_iter:
-        command_count = 0;
+    end_loop:
+        n = 0;
     }
-
     return 0;
 }
