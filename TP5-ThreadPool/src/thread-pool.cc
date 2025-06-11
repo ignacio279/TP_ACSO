@@ -7,7 +7,7 @@ ThreadPool::ThreadPool(size_t numThreads)
     done(false)                   // Finalmente, inicializa done
 {
     for (size_t i = 0; i < wts.size(); ++i) {
-        wts[i].ts = thread(&ThreadPool::worker, this, int(i));
+        wts[i].ts = thread(&ThreadPool::worker, this, int(i)); // inicia cada worker
     }
 }
 
