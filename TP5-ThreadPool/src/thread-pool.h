@@ -45,23 +45,21 @@
      ThreadPool& operator=(const ThreadPool&) = delete;
  
    private:
-     void dispatcher();        // toma tareas de la cola y despierta workers
-     void workerLoop(int id);  // bucle interno de cada worker
+     void worker(int id);          // worker loop
+     void dispatcher();            // dispatcher thread (optional)
  
-     thread dt;                      // hilo despachador
-     vector<worker_t> wts;           // todos los workers
+     thread dt;                     // dispatcher thread (optional)
+     vector<worker_t> wts;          // worker threads
  
-     queue<function<void(void)>> taskQueue; // tareas pendientes
-     Semaphore taskSem{0};           // señaliza al dispatcher "nueva tarea"
+     queue<function<void(void)>> taskQueue; // queue for tasks
+     Semaphore taskSem{0};          // semaphore to signal dispatcher that there's work
+     mutex queueLock;               // protects taskQueue and worker idle status
+     mutex waitLock;                // protects task counters
+     condition_variable waitCV;     // for waiting until all tasks are done
  
-     mutex queueLock;                // protege taskQueue y workers.idle
-     mutex waitLock;                 // protege counters para wait()
-     condition_variable waitCV;      // para wait()
- 
-     size_t tasksScheduled = 0;      // cuántas tareas se enviaron
-     size_t tasksCompleted = 0;      // cuántas ya terminaron
- 
-     bool done = false;              // para indicar shutdown
+     size_t tasksScheduled = 0;     // number of tasks scheduled
+     size_t tasksCompleted = 0;     // number of tasks completed
+     bool done = false;             // flag indicating shutdown
  };
  
  #endif // _thread_pool_
