@@ -4,7 +4,7 @@ ThreadPool::ThreadPool(size_t numThreads)
   : tasksScheduled(0),           // Inicializa tasksScheduled primero
     tasksCompleted(0),            // Luego tasksCompleted
     wts(numThreads),              // Luego wts
-    done(false)                   // Inicializa done al final
+    done(false)                   // Finalmente, inicializa done
 {
     for (size_t i = 0; i < wts.size(); ++i) {
         wts[i].ts = thread(&ThreadPool::worker, this, int(i));
