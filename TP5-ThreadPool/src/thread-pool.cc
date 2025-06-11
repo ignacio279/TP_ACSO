@@ -8,10 +8,10 @@
 
  // Constructor: starts N workers and a dispatcher thread
  ThreadPool::ThreadPool(size_t numThreads)
-   : wts(numThreads),
-     done(false),
-     tasksScheduled(0),
-     tasksCompleted(0)
+   : tasksScheduled(0),           // Inicializa tasksScheduled primero
+     tasksCompleted(0),            // Inicializa tasksCompleted después
+     done(false),                  // Luego inicializa done
+     wts(numThreads)               // Inicializa wts último
  {
      for (size_t i = 0; i < wts.size(); ++i) {
          wts[i].ts = thread(&ThreadPool::worker, this, int(i));
