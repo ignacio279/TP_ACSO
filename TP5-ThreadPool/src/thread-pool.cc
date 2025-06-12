@@ -10,7 +10,7 @@ ThreadPool::ThreadPool(size_t numThreads)
         wts[i].ts = thread(&ThreadPool::worker, this, int(i)); // inicia cada worker
     }
 }
-
+//facti
 
 
 // schedule(): enqueue the thunk and signal a worker to process it
