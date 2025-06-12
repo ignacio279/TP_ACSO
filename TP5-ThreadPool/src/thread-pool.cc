@@ -1,17 +1,16 @@
 #include "thread-pool.h"
 
 ThreadPool::ThreadPool(size_t numThreads)
-  : tasksScheduled(0),           // Inicializa tasksScheduled primero
-    tasksCompleted(0),            // Luego tasksCompleted
-    wts(numThreads),              // Luego wts
-    done(false)                   // Finalmente, inicializa done
+  : wts(numThreads),           
+    taskSem(0),
+    done(false),
+    tasksScheduled(0),
+    tasksCompleted(0)
 {
     for (size_t i = 0; i < wts.size(); ++i) {
-        wts[i].ts = thread(&ThreadPool::worker, this, int(i)); // inicia cada worker
+        wts[i].ts = thread(&ThreadPool::worker, this, int(i));
     }
 }
-//facti
-
 
 // schedule(): enqueue the thunk and signal a worker to process it
 void ThreadPool::schedule(const function<void(void)>& thunk) {
