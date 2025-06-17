@@ -1,25 +1,14 @@
-CXX      = g++
+CXX = g++
 CPPFLAGS = -std=c++11 -Wall -pthread -g
 
-# Ejecutables
-TPTST  := tptest
-TCUST  := tpcustomtest
-MAIN   := main
-CUSTOM := custom
+tptest: thread-pool.cc Semaphore.cc tptest.cc thread-pool.h Semaphore.h
+	$(CXX) $(CPPFLAGS) thread-pool.cc Semaphore.cc tptest.cc -o tptest
 
-all: $(TPTST) $(TCUST) $(MAIN) $(CUSTOM)
+tpcustomtest: thread-pool.cc Semaphore.cc tpcustomtest.cc thread-pool.h Semaphore.h
+	$(CXX) $(CPPFLAGS) thread-pool.cc Semaphore.cc tpcustomtest.cc -o tpcustomtest
 
-$(TPTST): thread-pool.cc Semaphore.cc tptest.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) $^ -o $@
-
-$(TCUST): thread-pool.cc Semaphore.cc tpcustomtest.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) $^ -o $@
-
-$(MAIN): main.cc thread-pool.cc Semaphore.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) $^ -o $@
-
-$(CUSTOM): thread-pool.cc Semaphore.cc test_custom.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) $^ -o $@
+main: main.cc thread-pool.cc Semaphore.cc
+	g++ -std=c++11 -Wall -pthread -g main.cc thread-pool.cc Semaphore.cc -o main
 
 clean:
-	rm -f $(TPTST) $(TCUST) $(MAIN) $(CUSTOM)
+	rm -f tptest tpcustomtest main *.o
