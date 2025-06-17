@@ -1,27 +1,25 @@
 CXX      = g++
 CPPFLAGS = -std=c++11 -Wall -pthread -g
 
-# Binaries
-CUSTOM_BIN  = custom
-TPTST_BIN   = tptest
-TCUSTTST_BIN= tpcustomtest
-MAIN_BIN    = main
+# Ejecutables
+TPTST  := tptest
+TCUST  := tpcustomtest
+MAIN   := main
+CUSTOM := custom
 
-# Reglas
-$(TPTST_BIN): thread-pool.cc Semaphore.cc tptest.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) thread-pool.cc Semaphore.cc tptest.cc -o $@
+all: $(TPTST) $(TCUST) $(MAIN) $(CUSTOM)
 
-$(TCUSTTST_BIN): thread-pool.cc Semaphore.cc tpcustomtest.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) thread-pool.cc Semaphore.cc tpcustomtest.cc -o $@
+$(TPTST): thread-pool.cc Semaphore.cc tptest.cc thread-pool.h Semaphore.h
+	$(CXX) $(CPPFLAGS) $^ -o $@
 
-$(MAIN_BIN): main.cc thread-pool.cc Semaphore.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) main.cc thread-pool.cc Semaphore.cc -o $@
+$(TCUST): thread-pool.cc Semaphore.cc tpcustomtest.cc thread-pool.h Semaphore.h
+	$(CXX) $(CPPFLAGS) $^ -o $@
 
-$(CUSTOM_BIN): thread-pool.cc Semaphore.cc test_custom.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) thread-pool.cc Semaphore.cc test_custom.cc -o $@
+$(MAIN): main.cc thread-pool.cc Semaphore.cc thread-pool.h Semaphore.h
+	$(CXX) $(CPPFLAGS) $^ -o $@
 
-# Alias
-custom: $(CUSTOM_BIN)
+$(CUSTOM): thread-pool.cc Semaphore.cc test_custom.cc thread-pool.h Semaphore.h
+	$(CXX) $(CPPFLAGS) $^ -o $@
 
 clean:
-	rm -f $(TPTST_BIN) $(TCUSTTST_BIN) $(MAIN_BIN) $(CUSTOM_BIN)
+	rm -f $(TPTST) $(TCUST) $(MAIN) $(CUSTOM)
