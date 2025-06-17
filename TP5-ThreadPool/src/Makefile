@@ -1,24 +1,27 @@
 CXX      = g++
 CPPFLAGS = -std=c++11 -Wall -pthread -g
 
-# Nombre del binario para la suite de tests personalizada
-CUSTOM_BIN = custom
+# Binaries
+CUSTOM_BIN  = custom
+TPTST_BIN   = tptest
+TCUSTTST_BIN= tpcustomtest
+MAIN_BIN    = main
 
-tptest: thread-pool.cc Semaphore.cc tptest.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) thread-pool.cc Semaphore.cc tptest.cc -o tptest
+# Reglas
+$(TPTST_BIN): thread-pool.cc Semaphore.cc tptest.cc thread-pool.h Semaphore.h
+	$(CXX) $(CPPFLAGS) thread-pool.cc Semaphore.cc tptest.cc -o $@
 
-tpcustomtest: thread-pool.cc Semaphore.cc tpcustomtest.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) thread-pool.cc Semaphore.cc tpcustomtest.cc -o tpcustomtest
+$(TCUSTTST_BIN): thread-pool.cc Semaphore.cc tpcustomtest.cc thread-pool.h Semaphore.h
+	$(CXX) $(CPPFLAGS) thread-pool.cc Semaphore.cc tpcustomtest.cc -o $@
 
-main: main.cc thread-pool.cc Semaphore.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) main.cc thread-pool.cc Semaphore.cc -o main
+$(MAIN_BIN): main.cc thread-pool.cc Semaphore.cc thread-pool.h Semaphore.h
+	$(CXX) $(CPPFLAGS) main.cc thread-pool.cc Semaphore.cc -o $@
 
-# Regla para compilar la suite de tests custom
 $(CUSTOM_BIN): thread-pool.cc Semaphore.cc test_custom.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) thread-pool.cc Semaphore.cc test_custom.cc -o $(CUSTOM_BIN)
+	$(CXX) $(CPPFLAGS) thread-pool.cc Semaphore.cc test_custom.cc -o $@
 
-# Alias conveniente
+# Alias
 custom: $(CUSTOM_BIN)
 
 clean:
-	rm -f tptest tpcustomtest main $(CUSTOM_BIN)
+	rm -f $(TPTST_BIN) $(TCUSTTST_BIN) $(MAIN_BIN) $(CUSTOM_BIN)
