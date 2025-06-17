@@ -12,39 +12,34 @@ ThreadPool::ThreadPool(size_t numThreads)
     }
 }
 
-// schedule(): enqueue the thunk and signal a worker to process it
 void ThreadPool::schedule(const function<void(void)>& thunk) {
     {
-        lock_guard<mutex> lock(queueLock); // protejo el acceso a taskQueue
-        taskQueue.push(thunk);             // encolamos la tarea
-        ++tasksScheduled;                  // incrementamos el contador de tareas
+        lock_guard<mutex> lock(queueLock); 
+        taskQueue.push(thunk);             
+        ++tasksScheduled;                  
     }
-    taskSem.signal();  // despierta a los trabajadores
+    taskSem.signal();  
 }
 
-// wait(): blocks until all scheduled tasks are completed
 void ThreadPool::wait() {
-    unique_lock<mutex> lock(waitLock); // protejo el contador de tareas completadas
+    unique_lock<mutex> lock(waitLock); 
     waitCV.wait(lock, [this] {
-        return tasksCompleted == tasksScheduled; // esperamos hasta que todas las tareas se hayan completado
+        return tasksCompleted == tasksScheduled; 
     });
 }
 
-// Destructor: waits for all tasks to finish, signals workers to exit, and joins all threads
 ThreadPool::~ThreadPool() {
-    wait(); // esperamos a que se completen todas las tareas
+    wait(); 
 
     {
-        lock_guard<mutex> lock(queueLock); // marcamos que el pool está destruido
+        lock_guard<mutex> lock(queueLock); 
         done = true;
     }
 
-    // Despertamos a todos los workers para que salgan del bucle
     for (size_t i = 0; i < wts.size(); ++i) {
         taskSem.signal();
     }
 
-    // Unimos todos los hilos trabajadores
     for (auto& w : wts) {
         if (w.ts.joinable()) {
             w.ts.join();
@@ -52,12 +47,10 @@ ThreadPool::~ThreadPool() {
     }
 }
 
-// worker loop: each thread waits for a task to execute
 void ThreadPool::worker(int id) {
     while (true) {
-        taskSem.wait(); // espera por una tarea
+        taskSem.wait(); 
 
-        // Si el pool está terminado y la cola de tareas está vacía, el worker termina
         {
             lock_guard<mutex> lock(queueLock);
             if (done && taskQueue.empty()) {
@@ -65,26 +58,23 @@ void ThreadPool::worker(int id) {
             }
         }
 
-        // Extraemos la tarea de la cola
         function<void()> task;
         {
             lock_guard<mutex> lock(queueLock);
             if (taskQueue.empty()) {
-                continue; // si no hay tarea, seguimos esperando
+                continue; 
             }
-            task = move(taskQueue.front()); // tomamos la tarea
-            taskQueue.pop(); // eliminamos la tarea de la cola
+            task = move(taskQueue.front()); 
+            taskQueue.pop(); 
         }
 
-        // Ejecutamos la tarea
         task();
 
-        // Notificamos a wait() que hemos completado una tarea
         {
             lock_guard<mutex> lock(waitLock);
             ++tasksCompleted;
             if (tasksCompleted == tasksScheduled) {
-                waitCV.notify_one(); // notificamos cuando todas las tareas están completas
+                waitCV.notify_one(); 
             }
         }
     }
