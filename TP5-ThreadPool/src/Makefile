@@ -11,4 +11,4 @@ main: main.cc thread-pool.cc Semaphore.cc
 	g++ -std=c++11 -Wall -pthread -g main.cc thread-pool.cc Semaphore.cc -o main
 
 custom:
-	$(CXX) $(CXXFLAGS) -o $(TARGET) thread-pool.cc Semaphore.cc test_custom.c
+	$(CXX) $(CXXFLAGS) -o $(TARGET) thread-pool.cc Semaphore.cc test_custom.cc
