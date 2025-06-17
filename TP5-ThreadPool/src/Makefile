@@ -1,14 +1,20 @@
+# Compiler settings - Can change to clang++ if preferred
 CXX = g++
-CPPFLAGS = -std=c++11 -Wall -pthread -g
+CXXFLAGS = -std=c++11 -Wall -pthread -g
 
-tptest: thread-pool.cc Semaphore.cc tptest.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) thread-pool.cc Semaphore.cc tptest.cc -o tptest
+# Build targets
+TARGET = threadpool
+SRC = thread-pool.cc Semaphore.cc main.cc
 
-tpcustomtest: thread-pool.cc Semaphore.cc tpcustomtest.cc thread-pool.h Semaphore.h
-	$(CXX) $(CPPFLAGS) thread-pool.cc Semaphore.cc tpcustomtest.cc -o tpcustomtest
+# Link the target with object files
+$(TARGET): $(SRC)
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
-main: main.cc thread-pool.cc Semaphore.cc
-	g++ -std=c++11 -Wall -pthread -g main.cc thread-pool.cc Semaphore.cc -o main
+custom:
+	$(CXX) $(CXXFLAGS) -o $(TARGET) thread-pool.cc Semaphore.cc test_custom.cc
 
+# Clean up build artifacts
 clean:
-	rm -f tptest tpcustomtest main *.o
+	rm -f $(TARGET) $(OBJ)
+
+.PHONY: all clean
