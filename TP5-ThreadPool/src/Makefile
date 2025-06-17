@@ -1,5 +1,3 @@
-.PHONY: all clean custom
-
 # Compiler settings - Can change to clang++ if preferred
 CXX = g++
 CXXFLAGS = -std=c++11 -Wall -pthread -g
