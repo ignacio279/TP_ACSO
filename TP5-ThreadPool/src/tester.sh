@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Configuración
-TARGET="threadpool"
+TARGET="custom"
 MEMCHECK_LOG="valgrind_memcheck.log"
 HELGRIND_LOG="valgrind_helgrind.log"
 
