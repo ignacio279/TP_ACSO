@@ -1,91 +1,135 @@
-#include "thread-pool.h"
+/**
+ * File: tpcustomtest.cc
+ * ---------------------
+ * Unit tests *you* write to exercise the ThreadPool in una variedad
+ * de escenarios, protegiendo todas las escrituras a cout con oslock.
+ */
 
-ThreadPool::ThreadPool(size_t numThreads)
-  : wts(numThreads),           
-    taskSem(0),
-    done(false),
-    tasksScheduled(0),
-    tasksCompleted(0)
-{
-    for (size_t i = 0; i < wts.size(); ++i) {
-        wts[i].ts = thread(&ThreadPool::worker, this, int(i));
-    }
-}
-
-// schedule(): enqueue the thunk and signal a worker to process it
-void ThreadPool::schedule(const function<void(void)>& thunk) {
-    {
-        lock_guard<mutex> lock(queueLock); // protejo el acceso a taskQueue
-        taskQueue.push(thunk);             // encolamos la tarea
-        ++tasksScheduled;                  // incrementamos el contador de tareas
-    }
-    taskSem.signal();  // despierta a los trabajadores
-}
-
-// wait(): blocks until all scheduled tasks are completed
-void ThreadPool::wait() {
-    unique_lock<mutex> lock(waitLock); // protejo el contador de tareas completadas
-    waitCV.wait(lock, [this] {
-        return tasksCompleted == tasksScheduled; // esperamos hasta que todas las tareas se hayan completado
-    });
-}
-
-// Destructor: waits for all tasks to finish, signals workers to exit, and joins all threads
-ThreadPool::~ThreadPool() {
-    wait(); // esperamos a que se completen todas las tareas
-
-    {
-        lock_guard<mutex> lock(queueLock); // marcamos que el pool está destruido
-        done = true;
-    }
-
-    // Despertamos a todos los workers para que salgan del bucle
-    for (size_t i = 0; i < wts.size(); ++i) {
-        taskSem.signal();
-    }
-
-    // Unimos todos los hilos trabajadores
-    for (auto& w : wts) {
-        if (w.ts.joinable()) {
-            w.ts.join();
-        }
-    }
-}
-
-// worker loop: each thread waits for a task to execute
-void ThreadPool::worker(int id) {
-    while (true) {
-        taskSem.wait(); // espera por una tarea
-
-        // Si el pool está terminado y la cola de tareas está vacía, el worker termina
-        {
-            lock_guard<mutex> lock(queueLock);
-            if (done && taskQueue.empty()) {
-                break;
-            }
-        }
-
-        // Extraemos la tarea de la cola
-        function<void()> task;
-        {
-            lock_guard<mutex> lock(queueLock);
-            if (taskQueue.empty()) {
-                continue; // si no hay tarea, seguimos esperando
-            }
-            task = move(taskQueue.front()); // tomamos la tarea
-            taskQueue.pop(); // eliminamos la tarea de la cola
-        }
-
-        // Ejecutamos la tarea
-        task();
-
-        // Notificamos a wait() que hemos completado una tarea
-        {
-            lock_guard<mutex> lock(waitLock);
-            ++tasksCompleted;
-            if (tasksCompleted == tasksScheduled) {
-                waitCV.notify_one(); // notificamos cuando todas las tareas están completas
-            }
-        }
-    }
-}
+ #include <iostream>
+ #include <sstream>
+ #include <map>
+ #include <string>
+ #include <functional>
+ #include <cstring>
+ #include <mutex>
+ #include <sys/types.h> // para contar hilos
+ #include <unistd.h>    // para contar hilos
+ #include <dirent.h>    // para opendir, readdir, closedir
+ 
+ #include "thread-pool.h"
+ 
+ using namespace std;
+ 
+ // mutex global para serializar todo cout
+ static mutex oslock;
+ 
+ void sleep_for(int slp){
+     this_thread::sleep_for(chrono::milliseconds(slp));
+ }
+ 
+ static const size_t kNumThreads = 4;
+ static const size_t kNumFunctions = 10;
+ 
+ static void simpleTest() {
+     ThreadPool pool(kNumThreads);
+     for (size_t id = 0; id < kNumFunctions; id++) {
+         pool.schedule([id] {
+             lock_guard<mutex> lg(oslock);
+             cout << "Thread (ID: " << id << ") has started." << endl;
+             // lg desbloquea al salir de este scope
+ 
+             size_t sleepTime = (id % 3) * 10;
+             this_thread::sleep_for(chrono::milliseconds(sleepTime));
+ 
+             lock_guard<mutex> lg2(oslock);
+             cout << "Thread (ID: " << id << ") has finished." << endl;
+         });
+     }
+     pool.wait();
+ }
+ 
+ static void singleThreadNoWaitTest() {
+     ThreadPool pool(4);
+     pool.schedule([] {
+         lock_guard<mutex> lg(oslock);
+         cout << "This is a test." << endl;
+     });
+     sleep_for(1000);
+ }
+ 
+ static void singleThreadSingleWaitTest() {
+     ThreadPool pool(4);
+     pool.schedule([] {
+         lock_guard<mutex> lg(oslock);
+         cout << "This is a test." << endl;
+         this_thread::sleep_for(chrono::milliseconds(1000));
+     });
+     pool.wait();
+ }
+ 
+ static void noThreadsDoubleWaitTest() {
+     ThreadPool pool(4);
+     pool.wait();
+     pool.wait();
+ }
+ 
+ static void reuseThreadPoolTest() {
+     ThreadPool pool(4);
+     for (size_t i = 0; i < 16; i++) {
+         pool.schedule([] {
+             lock_guard<mutex> lg(oslock);
+             cout << "This is a test." << endl;
+             this_thread::sleep_for(chrono::milliseconds(50));
+         });
+     }
+     pool.wait();
+     pool.schedule([] {
+         lock_guard<mutex> lg(oslock);
+         cout << "This is a code." << endl;
+         this_thread::sleep_for(chrono::milliseconds(1000));
+     });
+     pool.wait();
+ }
+ 
+ static void buildMap(map<string, function<void(void)>>& testFunctionMap) {
+     testFunctionMap["--single-thread-no-wait"]   = singleThreadNoWaitTest;
+     testFunctionMap["--single-thread-single-wait"] = singleThreadSingleWaitTest;
+     testFunctionMap["--no-threads-double-wait"] = noThreadsDoubleWaitTest;
+     testFunctionMap["--reuse-thread-pool"]      = reuseThreadPoolTest;
+     testFunctionMap["--s"]                      = simpleTest;
+ }
+ 
+ static void executeAll(const map<string, function<void(void)>>& testFunctionMap) {
+     for (const auto& entry: testFunctionMap) {
+         lock_guard<mutex> lg(oslock);
+         cout << entry.first << ":" << endl;
+         // lg desbloquea tras imprimir el flag
+         entry.second();
+     }
+ }
+ 
+ int main(int argc, char **argv) {
+     if (argc != 2) {
+         lock_guard<mutex> lg(oslock);
+         cout << "Ouch! I need exactly two arguments." << endl;
+         return 0;
+     }
+ 
+     map<string, function<void(void)>> testFunctionMap;
+     buildMap(testFunctionMap);
+     string flag = argv[1];
+     if (flag == "--all") {
+         executeAll(testFunctionMap);
+         return 0;
+     }
+     auto found = testFunctionMap.find(flag);
+     if (found == testFunctionMap.end()) {
+         lock_guard<mutex> lg(oslock);
+         cout << "Oops... we don't recognize the flag \"" << flag << "\"." << endl;
+         return 0;
+     }
+ 
+     found->second();
+     return 0;
+ }
+ 
