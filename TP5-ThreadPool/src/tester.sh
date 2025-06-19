@@ -50,7 +50,20 @@ else
   echo -e "${YELLOW}⚠️  Omitiendo Memcheck: valgrind no está instalado${RESET}"
 fi
 
+# Paso 5: Helgrind (race detection)
+if command -v valgrind &> /dev/null; then
+  echo -e "\n${YELLOW}🧵 Valgrind Helgrind (race detection)...${RESET}"
+  valgrind --tool=helgrind --error-exitcode=1 \
+           ./threadpool --all &> "$HELGRIND_LOG"
 
+  if [[ $? -ne 0 ]]; then
+    abort "$HELGRIND_LOG"
+  else
+    echo -e "${GREEN}✅ Helgrind OK: no se detectaron data races${RESET}"
+  fi
+else
+  echo -e "${YELLOW}⚠️  Omitiendo Helgrind: valgrind no está instalado${RESET}"
+fi
 
 # Paso 6: limpieza final
 echo -e "\n${YELLOW}🧹 Limpieza final...${RESET}"
