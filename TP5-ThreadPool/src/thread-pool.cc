@@ -1,12 +1,12 @@
 #include "thread-pool.h"
+#include <atomic>  // <-- necesario para std::atomic
 
 ThreadPool::ThreadPool(size_t numThreads)
-  : wts(numThreads),           
+  : wts(numThreads),
     taskSem(0),
-    done(false),
-    tasksScheduled(0),
-    tasksCompleted(0)
+    done(false)
 {
+    // los atomics ya inicializan a 0 por defecto
     for (size_t i = 0; i < wts.size(); ++i) {
         wts[i].ts = thread(&ThreadPool::worker, this, int(i));
     }
@@ -14,32 +14,35 @@ ThreadPool::ThreadPool(size_t numThreads)
 
 void ThreadPool::schedule(const function<void(void)>& thunk) {
     {
-        lock_guard<mutex> lock(queueLock); 
-        taskQueue.push(thunk);             
-        ++tasksScheduled;                  
+        lock_guard<mutex> lock(queueLock);
+        taskQueue.push(thunk);
+        tasksScheduled.fetch_add(1, memory_order_relaxed);
     }
-    taskSem.signal();  
+    taskSem.signal();
 }
 
 void ThreadPool::wait() {
-    unique_lock<mutex> lock(waitLock); 
+    unique_lock<mutex> lock(waitLock);
     waitCV.wait(lock, [this] {
-        return tasksCompleted == tasksScheduled; 
+        return tasksCompleted.load(memory_order_acquire)
+             == tasksScheduled.load(memory_order_acquire);
     });
 }
 
 ThreadPool::~ThreadPool() {
-    wait(); 
+    // Esperar a que terminen las tareas pendientes
+    wait();
 
+    // Señalar a los workers que deben salir
     {
-        lock_guard<mutex> lock(queueLock); 
+        lock_guard<mutex> lock(queueLock);
         done = true;
     }
-
     for (size_t i = 0; i < wts.size(); ++i) {
         taskSem.signal();
     }
 
+    // Unirse a todos
     for (auto& w : wts) {
         if (w.ts.joinable()) {
             w.ts.join();
@@ -49,7 +52,7 @@ ThreadPool::~ThreadPool() {
 
 void ThreadPool::worker(int id) {
     while (true) {
-        taskSem.wait(); 
+        taskSem.wait();
 
         {
             lock_guard<mutex> lock(queueLock);
@@ -62,19 +65,23 @@ void ThreadPool::worker(int id) {
         {
             lock_guard<mutex> lock(queueLock);
             if (taskQueue.empty()) {
-                continue; 
+                continue;
             }
-            task = move(taskQueue.front()); 
-            taskQueue.pop(); 
+            task = move(taskQueue.front());
+            taskQueue.pop();
         }
 
+        // Ejecutar la tarea fuera de cualquier candado
         task();
 
+        // Actualizar contador y notificar si ya acabó todo
+        tasksCompleted.fetch_add(1, memory_order_acq_rel);
         {
             lock_guard<mutex> lock(waitLock);
-            ++tasksCompleted;
-            if (tasksCompleted == tasksScheduled) {
-                waitCV.notify_one(); 
+            if (tasksCompleted.load(memory_order_acquire)
+             == tasksScheduled.load(memory_order_acquire))
+            {
+                waitCV.notify_all();
             }
         }
     }
